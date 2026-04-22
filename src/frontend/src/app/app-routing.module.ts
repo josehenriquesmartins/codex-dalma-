@@ -35,7 +35,7 @@ const routes: Routes = [
       { path: 'documentos-exigidos', component: DocumentosExigidosComponent, canActivate: [RoleGuard], data: { roles: ['Admin'] } },
       { path: 'portal-fornecedor', component: PortalFornecedorComponent, canActivate: [RoleGuard], data: { roles: ['Fornecedor'] } },
       { path: 'envio-nf', component: EnvioNfComponent, canActivate: [RoleGuard], data: { roles: ['Fornecedor'] } },
-      { path: 'admin-validacao', component: AdminValidacaoComponent, canActivate: [RoleGuard], data: { roles: ['Admin'] } },
+      { path: 'admin-validacao', component: AdminValidacaoComponent, canActivate: [RoleGuard], data: { roles: ['Admin', 'Financeiro'] } },
       { path: 'financeiro', component: FinanceiroComponent, canActivate: [RoleGuard], data: { roles: ['Admin', 'Financeiro'] } },
       { path: 'notificacoes', component: NotificacoesComponent }
     ]

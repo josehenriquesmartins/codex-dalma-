@@ -7,7 +7,7 @@ namespace Dalba.Financeiro.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminOrFinanceiro")]
 public class AdminController : ControllerBase
 {
     [HttpGet("envios")]

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -35,7 +33,7 @@ services:
   web:
     build:
       context: ./src/frontend
-      dockerfile: frontend.Dockerfile
+      dockerfile: src/frontend.Dockerfile
     container_name: dalba-web
     ports:
       - "4200:4200"

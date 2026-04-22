@@ -16,7 +16,7 @@
       <a class="nav-link menu-link" routerLink="/documentos-exigidos" *ngIf="auth.role === 'Admin'">Documentos Exigidos</a>
       <a class="nav-link menu-link" routerLink="/portal-fornecedor" *ngIf="auth.role === 'Fornecedor'">Envio Mensal</a>
       <a class="nav-link menu-link" routerLink="/envio-nf" *ngIf="auth.role === 'Fornecedor'">Envio NF</a>
-      <a class="nav-link menu-link" routerLink="/admin-validacao" *ngIf="auth.role === 'Admin'">Validação</a>
+      <a class="nav-link menu-link" routerLink="/admin-validacao" *ngIf="auth.role !== 'Fornecedor'">Validação</a>
       <a class="nav-link menu-link" routerLink="/financeiro" *ngIf="auth.role !== 'Fornecedor'">Financeiro</a>
       <a class="nav-link menu-link" routerLink="/notificacoes">Notificações</a>
     </nav>
