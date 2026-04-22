@@ -1,0 +1,34 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo-wrap">
+        <img class="sidebar-logo" src="assets/images/logo-dalba-300x141.webp" alt="Logo Dalba">
+      </div>
+      <p>Gestão de envio de documentos</p>
+    </div>
+    <nav class="nav flex-column gap-2">
+      <a class="nav-link menu-link" routerLink="/dashboard">Dashboard</a>
+      <a class="nav-link menu-link" routerLink="/usuarios" *ngIf="auth.role === 'Admin'">Usuários</a>
+      <a class="nav-link menu-link" routerLink="/fornecedores" *ngIf="auth.role !== 'Fornecedor'">Fornecedores</a>
+      <a class="nav-link menu-link" routerLink="/categorias" *ngIf="auth.role === 'Admin'">Categorias</a>
+      <a class="nav-link menu-link" routerLink="/contratos">Contratos</a>
+      <a class="nav-link menu-link" routerLink="/documentos" *ngIf="auth.role === 'Admin'">Documentos</a>
+      <a class="nav-link menu-link" routerLink="/documentos-exigidos" *ngIf="auth.role === 'Admin'">Documentos Exigidos</a>
+      <a class="nav-link menu-link" routerLink="/portal-fornecedor" *ngIf="auth.role === 'Fornecedor'">Envio Mensal</a>
+      <a class="nav-link menu-link" routerLink="/envio-nf" *ngIf="auth.role === 'Fornecedor'">Envio NF</a>
+      <a class="nav-link menu-link" routerLink="/admin-validacao" *ngIf="auth.role === 'Admin'">Validação</a>
+      <a class="nav-link menu-link" routerLink="/financeiro" *ngIf="auth.role !== 'Fornecedor'">Financeiro</a>
+      <a class="nav-link menu-link" routerLink="/notificacoes">Notificações</a>
+    </nav>
+    <button class="btn btn-light mt-auto" (click)="auth.logout()">Sair</button>
+  </aside>
+  <main class="content">
+    <header class="topbar card">
+      <div>
+        <strong>{{ auth.session?.nome }}</strong>
+        <div>{{ auth.role }}</div>
+      </div>
+    </header>
+    <router-outlet></router-outlet>
+  </main>
+</div>

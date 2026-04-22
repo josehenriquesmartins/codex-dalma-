@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dalba-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: DALBA
+    ports:
+      - "5432:5432"
+    volumes:
+      - dalba-postgres-data:/var/lib/postgresql/data
+      - ./database/01-create-dalba.sql:/docker-entrypoint-initdb.d/01-create-dalba.sql
+
+  api:
+    build:
+      context: ./src/backend
+      dockerfile: Dalba.Financeiro.Api/Dockerfile
+    container_name: dalba-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=DALBA;Username=postgres;Password=postgres
+      Jwt__Issuer: Dalba.Financeiro.Api
+      Jwt__Audience: Dalba.Financeiro.Frontend
+      Jwt__Key: DALBA_SUPER_SECRET_KEY_2026_CHANGE_ME
+    ports:
+      - "8080:8080"
+    volumes:
+      - dalba-uploads:/app/storage/uploads
+    depends_on:
+      - postgres
+
+  web:
+    build:
+      context: ./src/frontend
+      dockerfile: frontend.Dockerfile
+    container_name: dalba-web
+    ports:
+      - "4200:4200"
+    depends_on:
+      - api
+
+volumes:
+  dalba-postgres-data:
+  dalba-uploads:

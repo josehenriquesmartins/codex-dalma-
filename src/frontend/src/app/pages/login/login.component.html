@@ -1,0 +1,48 @@
+<div class="login-page">
+  <div class="login-card card border-0">
+    <div class="login-brand">
+      <div class="login-logo-wrap">
+        <img class="login-logo" src="assets/images/logo-dalba-300x141.webp" alt="Logo Dalba">
+      </div>
+      <div>
+        <h1 class="login-title mb-2">Gestão de documentos</h1>
+        <p class="login-subtitle mb-0">Controle documental, conformidade e liberação financeira.</p>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label class="form-label required">Login</label>
+        <input class="form-control form-control-lg" formControlName="login" placeholder="Informe seu login" />
+        <div class="field-error" *ngIf="form.get('login')?.touched && form.get('login')?.hasError('required')">Informe o login.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label required">Senha</label>
+        <input class="form-control form-control-lg" type="password" formControlName="senha" placeholder="Digite sua senha" />
+        <div class="field-error" *ngIf="form.get('senha')?.touched && form.get('senha')?.hasError('required')">Informe a senha.</div>
+      </div>
+
+      <div class="login-actions">
+        <button class="btn btn-link login-forgot" type="button" [disabled]="recovering || loading" (click)="forgotPassword()">
+          {{ recovering ? 'Enviando token...' : 'Esqueceu a senha?' }}
+        </button>
+        <a class="login-reset-link" routerLink="/redefinir-senha">Tenho um token</a>
+      </div>
+
+      <div class="alert alert-danger py-2" role="alert" *ngIf="error">{{ error }}</div>
+      <div class="alert alert-success py-2" role="status" *ngIf="message">{{ message }}</div>
+
+      <div class="d-grid gap-2 mt-4">
+        <button class="btn btn-primary btn-lg login-submit" [disabled]="loading || form.invalid">
+          {{ loading ? 'Entrando...' : 'Entrar' }}
+        </button>
+      </div>
+
+      <div class="login-helper mt-4">
+        <strong>Acesso inicial</strong>
+        <div>Admin: <span>admin / Admin&#64;123</span></div>
+      </div>
+    </form>
+  </div>
+</div>

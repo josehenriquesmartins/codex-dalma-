@@ -1,0 +1,22 @@
+<section class="page-shell">
+  <div class="toolbar"><div><h2 class="mb-1">Contratos</h2><p class="section-subtitle">A lista de contratos fica acima e o formulário de cadastro/edição abaixo.</p></div></div>
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="card-title">Lista de contratos</div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0"><thead><tr><th>Número</th><th>Fornecedor</th><th>Vigência</th><th class="text-end" *ngIf="!isFornecedor">Ações</th></tr></thead><tbody><tr *ngFor="let item of contratos"><td>{{item.numeroContrato}}</td><td>{{item.fornecedorNome}}</td><td>{{item.dataInicio}} até {{item.dataFim || 'aberto'}}</td><td class="text-end" *ngIf="!isFornecedor"><div class="actions justify-content-end"><button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">Editar</button><button type="button" class="btn btn-danger btn-sm" (click)="remove(item)">Excluir</button></div></td></tr></tbody></table>
+      </div>
+    </div>
+    <form class="card crud-card" [formGroup]="form" (ngSubmit)="save()" *ngIf="!isFornecedor">
+      <div class="card-title">{{ editingId ? 'Alterar contrato' : 'Incluir contrato' }}</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6"><label class="form-label required">Fornecedor</label><select class="form-select" formControlName="fornecedorId"><option *ngFor="let item of fornecedores" [ngValue]="item.id">{{item.nomeOuRazaoSocial}}</option></select><div class="field-error" *ngIf="form.get('fornecedorId')?.touched && form.get('fornecedorId')?.hasError('required')">Selecione o fornecedor.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label required">Número</label><input class="form-control" formControlName="numeroContrato"><div class="field-error" *ngIf="form.get('numeroContrato')?.touched && form.get('numeroContrato')?.hasError('required')">Informe o número.</div></div>
+        <div class="col-12"><label class="form-label required">Descrição</label><input class="form-control" formControlName="descricao"><div class="field-error" *ngIf="form.get('descricao')?.touched && form.get('descricao')?.hasError('required')">Informe a descrição.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label required">Data Início</label><input class="form-control" type="date" formControlName="dataInicio"><div class="field-error" *ngIf="form.get('dataInicio')?.touched && form.get('dataInicio')?.hasError('required')">Informe a data de início.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label">Data Fim</label><input class="form-control" type="date" formControlName="dataFim"></div>
+        <div class="col-12 d-flex gap-2 flex-wrap"><button class="btn btn-primary" [disabled]="form.invalid">{{ editingId ? 'Atualizar contrato' : 'Salvar contrato' }}</button><button type="button" class="btn btn-outline-secondary" *ngIf="editingId" (click)="cancelEdit()">Cancelar</button></div>
+      </div>
+    </form>
+  </div>
+</section>

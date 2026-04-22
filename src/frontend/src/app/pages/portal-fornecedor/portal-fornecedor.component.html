@@ -1,0 +1,124 @@
+<section class="page-shell">
+  <div class="toolbar">
+    <div>
+      <h2 class="mb-1">Envio mensal do fornecedor</h2>
+      <p class="section-subtitle">Selecione a competência, confira a documentação obrigatória e envie os arquivos pendentes.</p>
+    </div>
+  </div>
+
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="card-title">Competência de envio</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-3">
+          <label class="form-label required">Mês</label>
+          <input class="form-control" type="number" [formControl]="form.controls.mesReferencia">
+          <div class="field-error" *ngIf="form.controls.mesReferencia.touched && form.controls.mesReferencia.hasError('required')">Informe o mês.</div>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label required">Ano</label>
+          <input class="form-control" type="number" [formControl]="form.controls.anoReferencia">
+          <div class="field-error" *ngIf="form.controls.anoReferencia.touched && form.controls.anoReferencia.hasError('required')">Informe o ano.</div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label required">Contrato</label>
+          <select class="form-select" [formControl]="form.controls.contratoId">
+            <option [ngValue]="null">Selecione</option>
+            <option *ngFor="let contrato of contratos" [ngValue]="contrato.id">
+              {{ contrato.numeroContrato }} - {{ contrato.descricao }}
+            </option>
+          </select>
+          <div class="field-error" *ngIf="form.controls.contratoId.touched && form.controls.contratoId.hasError('required')">Selecione o contrato.</div>
+        </div>
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <button class="btn btn-primary w-100 w-md-auto" (click)="carregar()" [disabled]="form.invalid">Abrir competência</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card crud-card" *ngIf="envio">
+      <div class="alert alert-info" *ngIf="envio.mensagem">{{ envio.mensagem }}</div>
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+        <div>
+          <div class="card-title mb-1">Documentos da competência</div>
+          <p class="section-subtitle">Referência {{ envio.mesReferencia }}/{{ envio.anoReferencia }} | Contrato {{ envio.contratoNumero || envio.contratoId || 'não informado' }}</p>
+          <p class="section-subtitle mb-0" *ngIf="envio.contratoDescricao">{{ envio.contratoDescricao }}</p>
+        </div>
+        <span class="status-pill" [class.pending]="envio.status !== 'EmConformidade'">{{ statusEnvioLabel(envio.status) }}</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Documento</th>
+              <th>Contrato</th>
+              <th>Obrigatório</th>
+              <th>Enviado</th>
+              <th>Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of envio.documentos">
+              <td>{{ item.nomeDocumento }}</td>
+              <td>{{ envio.contratoNumero || envio.contratoId || '-' }}</td>
+              <td>{{ item.obrigatorio ? 'Sim' : 'Não' }}</td>
+              <td><span class="status-pill" [class.pending]="!item.enviado">{{ item.enviado ? 'Enviado' : 'Pendente' }}</span></td>
+              <td>{{ item.statusValidacao || 'Pendente' }}</td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm" type="button" *ngIf="item.enviado" (click)="visualizarDocumento(item)">Visualizar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card crud-card" *ngIf="envio">
+      <div class="card-title">Upload de documento</div>
+      <div class="alert alert-info" *ngIf="!documentosPendentes.length">Todos os documentos desta competência já foram enviados.</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-5">
+          <label class="form-label required">Tipo do documento</label>
+          <select class="form-select" [formControl]="uploadForm.controls.documentoTipoId">
+            <option *ngFor="let item of documentosPendentes" [ngValue]="item.documentoTipoId">{{ item.nomeDocumento }}</option>
+          </select>
+          <div class="field-error" *ngIf="uploadForm.controls.documentoTipoId.touched && uploadForm.controls.documentoTipoId.hasError('required')">Selecione o documento.</div>
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label required">Arquivo</label>
+          <input class="form-control" type="file" multiple (change)="onFileChange($event)">
+          <div class="form-text">Selecione um ou mais arquivos para o mesmo documento.</div>
+          <div class="field-error" *ngIf="fileTouched && !arquivos.length">Selecione ao menos um arquivo.</div>
+        </div>
+        <div class="col-12 d-flex gap-2 flex-wrap">
+          <button class="btn btn-secondary" (click)="upload()" [disabled]="uploading || uploadForm.invalid || !arquivos.length || !documentosPendentes.length">
+            {{ uploading ? 'Enviando...' : 'Enviar arquivo(s)' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="document-modal-backdrop" *ngIf="documentoVisualizado" (click)="fecharVisualizador()">
+    <div class="document-modal" (click)="$event.stopPropagation()">
+      <div class="document-modal-header">
+        <div>
+          <div class="fw-semibold">{{ documentoVisualizado.nomeDocumento }}</div>
+          <div class="small text-muted">{{ documentoVisualizado.nomeOriginalArquivo }} <span *ngIf="documentoVisualizado.tamanhoBytes">| {{ arquivoTamanho(documentoVisualizado.tamanhoBytes) }}</span></div>
+        </div>
+        <div class="actions">
+          <a class="btn btn-outline-secondary btn-sm" *ngIf="visualizadorObjectUrl" [href]="visualizadorObjectUrl" target="_blank" rel="noopener">Abrir em nova aba</a>
+          <button class="btn btn-outline-secondary btn-sm" type="button" (click)="fecharVisualizador()">Fechar</button>
+        </div>
+      </div>
+      <div class="document-modal-body">
+        <div *ngIf="isVisualizadorPdf()" #pdfContainer class="pdf-viewer"></div>
+        <div class="text-danger text-center py-4" *ngIf="visualizadorErro">{{ visualizadorErro }}</div>
+        <img *ngIf="isVisualizadorImagem()" [src]="visualizadorUrl" [alt]="documentoVisualizado.nomeOriginalArquivo">
+        <div class="text-muted text-center py-5" *ngIf="!isVisualizadorPdf() && !isVisualizadorImagem()">Este tipo de arquivo não possui pré-visualização.</div>
+      </div>
+    </div>
+  </div>
+</section>

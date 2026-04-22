@@ -1,0 +1,31 @@
+<section class="page-shell">
+  <div class="toolbar">
+    <div>
+      <h2 class="mb-1">Usuários</h2>
+      <p class="section-subtitle">Acompanhe a lista existente acima e use o formulário abaixo para incluir ou alterar.</p>
+    </div>
+  </div>
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="card-title">Lista de usuários</div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ativo</th><th class="text-end">Ações</th></tr></thead>
+          <tbody><tr *ngFor="let item of usuarios"><td>{{item.nome}}</td><td>{{item.login}}</td><td>{{item.perfil}}</td><td>{{ item.ativo ? 'Sim' : 'Não' }}</td><td class="text-end"><div class="actions justify-content-end"><button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">Editar</button><button type="button" class="btn btn-danger btn-sm" (click)="remove(item)">Excluir</button></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <form class="card crud-card" [formGroup]="form" (ngSubmit)="save()">
+      <div class="card-title">{{ editingId ? 'Alterar usuário' : 'Incluir usuário' }}</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6"><label class="form-label required">Nome</label><input class="form-control" formControlName="nome"><div class="field-error" *ngIf="form.get('nome')?.touched && form.get('nome')?.hasError('required')">Informe o nome.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label required">Email</label><input class="form-control" formControlName="email"><div class="field-error" *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')">Informe o e-mail.</div><div class="field-error" *ngIf="form.get('email')?.touched && form.get('email')?.hasError('email')">Informe um e-mail válido.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label required">Login</label><input class="form-control" formControlName="login"><div class="field-error" *ngIf="form.get('login')?.touched && form.get('login')?.hasError('required')">Informe o login.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label" [class.required]="!editingId">Senha</label><input class="form-control" type="password" formControlName="senha"><div class="field-error" *ngIf="form.get('senha')?.touched && form.get('senha')?.hasError('required')">Informe a senha.</div></div>
+        <div class="col-12 col-md-6"><label class="form-label required">Perfil</label><select class="form-select" formControlName="perfil"><option>Admin</option><option>Financeiro</option><option>Fornecedor</option></select><div class="field-error" *ngIf="form.get('perfil')?.touched && form.get('perfil')?.hasError('required')">Selecione o perfil.</div></div>
+        <div class="col-12 col-md-6" *ngIf="isPerfilFornecedor"><label class="form-label required">Fornecedor Id</label><input class="form-control" type="number" formControlName="fornecedorId"><div class="field-error" *ngIf="form.get('fornecedorId')?.touched && form.get('fornecedorId')?.hasError('required')">Informe o fornecedor.</div></div>
+        <div class="col-12 d-flex gap-2 flex-wrap"><button class="btn btn-primary" [disabled]="form.invalid">{{ editingId ? 'Atualizar usuário' : 'Salvar usuário' }}</button><button type="button" class="btn btn-outline-secondary" *ngIf="editingId" (click)="cancelEdit()">Cancelar</button></div>
+      </div>
+    </form>
+  </div>
+</section>

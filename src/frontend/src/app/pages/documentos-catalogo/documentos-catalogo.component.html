@@ -1,0 +1,47 @@
+<section class="page-shell">
+  <div class="toolbar">
+    <div>
+      <h2 class="mb-1">Documentos</h2>
+      <p class="section-subtitle">Catálogo mestre dos tipos de documentos disponíveis no sistema.</p>
+    </div>
+  </div>
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="card-title">Lista de documentos</div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr><th>Código</th><th>Nome</th><th>Descrição</th><th>Ativo</th><th class="text-end">Ações</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of tipos">
+              <td>{{ item.codigo }}</td>
+              <td>{{ item.nomeDocumento }}</td>
+              <td>{{ item.descricao || '-' }}</td>
+              <td>{{ item.ativo ? 'Sim' : 'Não' }}</td>
+              <td class="text-end">
+                <div class="actions justify-content-end">
+                  <button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">Editar</button>
+                  <button type="button" class="btn btn-danger btn-sm" (click)="remove(item)">Excluir</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <form class="card crud-card" [formGroup]="tipoForm" (ngSubmit)="save()">
+      <div class="card-title">{{ editingTipoId ? 'Alterar documento' : 'Incluir documento' }}</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-4"><label class="form-label required">Código</label><input class="form-control" formControlName="codigo"><div class="field-error" *ngIf="tipoForm.get('codigo')?.touched && tipoForm.get('codigo')?.hasError('required')">Informe o código.</div></div>
+        <div class="col-12 col-md-8"><label class="form-label required">Nome</label><input class="form-control" formControlName="nomeDocumento"><div class="field-error" *ngIf="tipoForm.get('nomeDocumento')?.touched && tipoForm.get('nomeDocumento')?.hasError('required')">Informe o nome.</div></div>
+        <div class="col-12"><label class="form-label">Descrição</label><input class="form-control" formControlName="descricao"></div>
+        <div class="col-12 d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary" [disabled]="tipoForm.invalid">{{ editingTipoId ? 'Atualizar documento' : 'Salvar documento' }}</button>
+          <button type="button" class="btn btn-outline-secondary" *ngIf="editingTipoId" (click)="cancelEdit()">Cancelar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>

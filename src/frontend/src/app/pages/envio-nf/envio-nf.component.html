@@ -1,0 +1,87 @@
+<section class="page-shell">
+  <div class="toolbar">
+    <div>
+      <h2 class="mb-1">Envio NF</h2>
+      <p class="section-subtitle">Após a aprovação total dos documentos, envie o número da nota fiscal para análise do financeiro.</p>
+    </div>
+  </div>
+
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+        <div>
+          <div class="card-title mb-1">Liberações disponíveis</div>
+          <p class="section-subtitle">Somente competências em conformidade documental aparecem nesta lista.</p>
+        </div>
+        <button class="btn btn-outline-primary" type="button" (click)="load()">Atualizar</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Competência</th>
+              <th>Contrato</th>
+              <th>Status</th>
+              <th>NF</th>
+              <th>Arquivo</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!carregando && !liberacoes.length">
+              <td colspan="6" class="text-center text-muted py-4">Ainda não há competência liberada para envio de nota fiscal.</td>
+            </tr>
+            <tr *ngFor="let item of liberacoes" [class.table-active]="selecionada?.id === item.id">
+              <td>{{ item.mesReferencia }}/{{ item.anoReferencia }}</td>
+              <td>{{ item.contrato || 'Sem contrato' }}</td>
+              <td><span class="status-pill" [class.pending]="item.statusFinanceiro === 'AguardandoEnvioNf'">{{ statusLabel(item.statusFinanceiro) }}</span></td>
+              <td>{{ item.numeroNotaFiscal || '-' }}</td>
+              <td>{{ item.nomeOriginalNotaFiscal || '-' }}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-primary" type="button" (click)="selecionar(item)" [disabled]="!podeEnviar(item)">
+                  {{ podeEnviar(item) ? 'Enviar NF' : 'NF enviada' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card crud-card" *ngIf="selecionada">
+      <div class="card-title">Informar nota fiscal</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label">Competência</label>
+          <input class="form-control" [value]="selecionada.mesReferencia + '/' + selecionada.anoReferencia" readonly>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label">Contrato</label>
+          <input class="form-control" [value]="selecionada.contrato || 'Sem contrato'" readonly>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label required">Número NF</label>
+          <input class="form-control" [(ngModel)]="numeroNotaFiscal" placeholder="Informe o número da nota fiscal">
+          <div class="field-error" *ngIf="attempted && !numeroNotaFiscal.trim()">Informe o número da nota fiscal.</div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label required">Arquivo da NF</label>
+          <input class="form-control" type="file" accept=".pdf,.xml,application/pdf,text/xml,application/xml" (change)="onFileChange($event)">
+          <div class="form-text">Anexe a nota fiscal em PDF ou XML, com tamanho máximo de 10MB.</div>
+          <div class="field-error" *ngIf="attempted && !arquivoNotaFiscal">Anexe o arquivo da nota fiscal.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Observação</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="observacao" placeholder="Observações para o financeiro, se houver."></textarea>
+        </div>
+        <div class="col-12 d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary" type="button" (click)="enviar()" [disabled]="enviando">
+            {{ enviando ? 'Enviando...' : 'Enviar NF para o financeiro' }}
+          </button>
+          <button class="btn btn-outline-secondary" type="button" (click)="selecionada = null">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Dalba.Financeiro.Api/Dalba.Financeiro.Api.csproj" />
+    <Project Path="src/backend/Dalba.Financeiro.Application/Dalba.Financeiro.Application.csproj" />
+    <Project Path="src/backend/Dalba.Financeiro.Domain/Dalba.Financeiro.Domain.csproj" />
+    <Project Path="src/backend/Dalba.Financeiro.Infrastructure/Dalba.Financeiro.Infrastructure.csproj" />
+  </Folder>
+</Solution>

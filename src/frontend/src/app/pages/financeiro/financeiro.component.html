@@ -1,0 +1,102 @@
+<section class="page-shell">
+  <div class="toolbar">
+    <div>
+      <h2 class="mb-1">Módulo financeiro</h2>
+      <p class="section-subtitle">Filtre a competência para consultar fornecedores liberados para envio de NF e acompanhar o status financeiro.</p>
+    </div>
+  </div>
+
+  <div class="crud-stack">
+    <div class="card crud-card">
+      <div class="card-title">Competência de referência</div>
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label">Mês</label>
+          <input class="form-control" type="number" min="1" max="12" [(ngModel)]="filtro.mesReferencia">
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Ano</label>
+          <input class="form-control" type="number" min="2020" [(ngModel)]="filtro.anoReferencia">
+        </div>
+        <div class="col-12 col-md-4">
+          <button class="btn btn-primary w-100" type="button" (click)="load()">Pesquisar fornecedores</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card crud-card">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+        <div>
+          <div class="card-title mb-1">Fornecedores aprovados para NF</div>
+          <p class="section-subtitle">A lista mostra os fornecedores em conformidade documental na competência filtrada.</p>
+        </div>
+        <span class="status-pill pending">{{ registros.length }} registro(s)</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Fornecedor</th>
+              <th>Contrato</th>
+              <th>Competência</th>
+              <th>Status</th>
+              <th>NF</th>
+              <th>Arquivo</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!carregando && !registros.length">
+              <td colspan="7" class="text-center text-muted py-4">Nenhum fornecedor aprovado foi encontrado para a competência informada.</td>
+            </tr>
+            <tr *ngFor="let item of registros" [class.table-active]="selecionado?.id === item.id">
+              <td>{{ item.fornecedor }}</td>
+              <td>{{ item.contrato || 'Sem contrato' }}</td>
+              <td>{{ item.mesReferencia }}/{{ item.anoReferencia }}</td>
+              <td><span class="status-pill" [class.pending]="item.statusFinanceiro === 'AguardandoEnvioNf'">{{ statusLabel(item.statusFinanceiro) }}</span></td>
+              <td>{{ item.numeroNotaFiscal || '-' }}</td>
+              <td>{{ item.nomeOriginalNotaFiscal || '-' }}</td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm" type="button" (click)="editar(item)">Atualizar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card crud-card" *ngIf="selecionado">
+      <div class="card-title">Atualizar financeiro</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label">Liberação</label>
+          <input class="form-control" [value]="selecionado.id" readonly>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label required">Status</label>
+          <select class="form-select" [(ngModel)]="statusFinanceiro">
+            <option value="AguardandoEnvioNf">Aguardando envio de NF</option>
+            <option value="AguardandoPagamento">Aguardando pagamento</option>
+            <option value="EmAnaliseFinanceira">Em análise financeira</option>
+            <option value="LiberadoParaPagamento">Liberado para pagamento</option>
+            <option value="Pago">Pago</option>
+          </select>
+          <div class="field-error" *ngIf="attempted && !statusFinanceiro">Selecione o status.</div>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label">Número NF</label>
+          <input class="form-control" [(ngModel)]="numeroNotaFiscal">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Observação</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="observacao"></textarea>
+        </div>
+        <div class="col-12 d-flex gap-2 flex-wrap">
+          <button class="btn btn-primary" (click)="salvar()" [disabled]="!selecionado || !statusFinanceiro">Salvar atualização</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="selecionado = null">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

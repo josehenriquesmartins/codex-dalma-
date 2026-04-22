@@ -1,0 +1,30 @@
+<section class="page-shell dashboard-shell">
+  <div class="toolbar dashboard-header">
+    <div>
+      <h2>Dashboard {{ role }}</h2>
+      <p>Indicadores resumidos por perfil.</p>
+    </div>
+  </div>
+
+  <div class="dashboard-board">
+    <div class="dashboard-summary">
+      <span class="summary-kicker">Visão geral</span>
+      <strong>{{ entries().length }}</strong>
+      <span>indicadores acompanhados</span>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 dashboard-cards">
+      <div class="col" *ngFor="let item of entries(); let i = index">
+        <article class="dashboard-tile card h-100" [ngClass]="toneFor(i)">
+          <div class="tile-top">
+            <span class="tile-icon">{{ labelFor(item.key).charAt(0) }}</span>
+          </div>
+          <div class="tile-content">
+            <div class="stat-value">{{ item.value }}</div>
+            <div class="stat-label">{{ labelFor(item.key) }}</div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
