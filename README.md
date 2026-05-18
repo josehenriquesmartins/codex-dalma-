@@ -1,6 +1,6 @@
-# DALBA Financeiro
+# DALBA Custos
 
-Solução full-stack para gestão financeira de pagamentos contratuais com backend `.NET 9`, frontend `Angular`, banco `PostgreSQL` e execução via `Docker Compose`.
+Solução full-stack para gestão de documentos, conformidade e custos de pagamentos contratuais com backend `.NET 9`, frontend `Angular`, banco `PostgreSQL` e execução via `Docker Compose`.
 
 ## Estrutura
 

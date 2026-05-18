@@ -13,6 +13,10 @@ using Dalba.Financeiro.Domain.Entities;
 using Dalba.Financeiro.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using UglyToad.PdfPig;
 
 namespace Dalba.Financeiro.Application.Services;
 
@@ -690,7 +694,7 @@ public class AdminValidationService
             }
 
             var fornecedor = envio.Fornecedor!;
-            var mensagem = $"Todos os documentos da competência {envio.MesReferencia:00}/{envio.AnoReferencia} foram aprovados. Você está liberado para enviar a nota fiscal ao financeiro.";
+            var mensagem = $"Todos os documentos da competência {envio.MesReferencia:00}/{envio.AnoReferencia} foram aprovados. Você está liberado para enviar a nota fiscal para Custos.";
             await _notificationService.NotificarFornecedorEmailSmsAsync(fornecedor, "Fornecedor em conformidade", mensagem, "documentos_enviados", envio.Id, ct);
             await _notificationService.RegistrarDashboardAdminAsync(
                 "Fornecedor em conformidade",
@@ -740,7 +744,9 @@ public class AdminValidationService
 public class FinanceiroService
 {
     private static readonly string[] NotaFiscalExtensions = [".pdf", ".xml"];
+    private static readonly string[] BoletoExtensions = [".pdf"];
     private const long MaxNotaFiscalFileSize = 10 * 1024 * 1024;
+    private const long MaxBoletoFileSize = 10 * 1024 * 1024;
     private readonly IAppDbContext _context;
     private readonly IAuditService _auditService;
     private readonly ICurrentUserService _currentUser;
@@ -756,12 +762,20 @@ public class FinanceiroService
         _notificationService = notificationService;
     }
 
-    public async Task<IReadOnlyCollection<FinanceiroLiberacaoResponse>> ListAsync(short mesReferencia, short anoReferencia, CancellationToken ct) =>
-        await _context.FinanceiroLiberacoes.AsNoTracking()
+    public async Task<IReadOnlyCollection<FinanceiroLiberacaoResponse>> ListAsync(short mesReferencia, short anoReferencia, StatusFinanceiro? statusFinanceiro, CancellationToken ct)
+    {
+        var query = _context.FinanceiroLiberacoes.AsNoTracking()
             .Include(x => x.Fornecedor)
             .Include(x => x.Contrato)
             .Include(x => x.DocumentoEnviado)
-            .Where(x => x.DocumentoEnviado!.MesReferencia == mesReferencia && x.DocumentoEnviado.AnoReferencia == anoReferencia)
+            .Where(x => x.DocumentoEnviado!.MesReferencia == mesReferencia && x.DocumentoEnviado.AnoReferencia == anoReferencia);
+
+        if (statusFinanceiro.HasValue)
+        {
+            query = query.Where(x => x.StatusFinanceiro == statusFinanceiro.Value);
+        }
+
+        return await query
             .OrderByDescending(x => x.DataHoraGeracao)
             .Select(x => new FinanceiroLiberacaoResponse(
                 x.Id,
@@ -772,12 +786,57 @@ public class FinanceiroService
                 x.DocumentoEnviado.AnoReferencia,
                 x.StatusFinanceiro,
                 x.NumeroNotaFiscal,
+                x.NumeroAf,
                 x.NomeOriginalNotaFiscal,
                 x.ExtensaoNotaFiscal,
                 x.TamanhoBytesNotaFiscal,
                 x.DataHoraUploadNotaFiscal,
+                x.NomeOriginalBoleto,
+                x.ExtensaoBoleto,
+                x.TamanhoBytesBoleto,
+                x.DataHoraUploadBoleto,
                 x.DataHoraGeracao))
             .ToListAsync(ct);
+    }
+
+    public async Task<byte[]> ExportarExcelAsync(short mesReferencia, short anoReferencia, StatusFinanceiro? statusFinanceiro, CancellationToken ct)
+    {
+        var registros = await ListAsync(mesReferencia, anoReferencia, statusFinanceiro, ct);
+        var builder = new StringBuilder();
+        builder.AppendLine("<html><head><meta charset=\"utf-8\"></head><body><table border=\"1\">");
+        builder.AppendLine("<tr><th>Fornecedor</th><th>Contrato</th><th>Competência</th><th>Status</th><th>Número NF</th><th>Arquivo NF</th><th>Arquivo Boleto</th><th>Data Geração</th></tr>");
+        foreach (var item in registros)
+        {
+            builder.AppendLine("<tr>" +
+                $"<td>{EscapeHtml(item.Fornecedor)}</td>" +
+                $"<td>{EscapeHtml(item.Contrato ?? "Sem contrato")}</td>" +
+                $"<td>{item.MesReferencia:00}/{item.AnoReferencia}</td>" +
+                $"<td>{item.StatusFinanceiro}</td>" +
+                $"<td>{EscapeHtml(item.NumeroNotaFiscal ?? string.Empty)}</td>" +
+                $"<td>{EscapeHtml(item.NomeOriginalNotaFiscal ?? string.Empty)}</td>" +
+                $"<td>{EscapeHtml(item.NomeOriginalBoleto ?? string.Empty)}</td>" +
+                $"<td>{item.DataHoraGeracao:dd/MM/yyyy HH:mm}</td>" +
+                "</tr>");
+        }
+
+        builder.AppendLine("</table></body></html>");
+        return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(builder.ToString())).ToArray();
+    }
+
+    public async Task<byte[]> ExportarPdfAsync(short mesReferencia, short anoReferencia, StatusFinanceiro? statusFinanceiro, CancellationToken ct)
+    {
+        var registros = await ListAsync(mesReferencia, anoReferencia, statusFinanceiro, ct);
+        var linhas = new List<string>
+        {
+            $"DALBA - Relatório de Custos - Competência {mesReferencia:00}/{anoReferencia}",
+            $"Status: {(statusFinanceiro?.ToString() ?? "Todos")}",
+            $"Gerado em: {DbClock.Now:dd/MM/yyyy HH:mm}",
+            string.Empty,
+            "Fornecedor | Contrato | Status | NF | Boleto"
+        };
+        linhas.AddRange(registros.Select(x => $"{x.Fornecedor} | {x.Contrato ?? "Sem contrato"} | {x.StatusFinanceiro} | {x.NumeroNotaFiscal ?? "-"} | {x.NomeOriginalBoleto ?? "-"}"));
+        return BuildSimplePdf(linhas);
+    }
 
     public async Task<IReadOnlyCollection<FinanceiroLiberacaoResponse>> ListFornecedorAsync(CancellationToken ct)
     {
@@ -799,18 +858,24 @@ public class FinanceiroService
                 x.DocumentoEnviado.AnoReferencia,
                 x.StatusFinanceiro,
                 x.NumeroNotaFiscal,
+                x.NumeroAf,
                 x.NomeOriginalNotaFiscal,
                 x.ExtensaoNotaFiscal,
                 x.TamanhoBytesNotaFiscal,
                 x.DataHoraUploadNotaFiscal,
+                x.NomeOriginalBoleto,
+                x.ExtensaoBoleto,
+                x.TamanhoBytesBoleto,
+                x.DataHoraUploadBoleto,
                 x.DataHoraGeracao))
             .ToListAsync(ct);
     }
 
-    public async Task EnviarNotaFiscalAsync(long id, EnviarNotaFiscalRequest request, CancellationToken ct)
+    public async Task<EnvioNotaFiscalResultadoResponse> EnviarNotaFiscalAsync(long id, EnviarNotaFiscalRequest request, CancellationToken ct)
     {
         var fornecedorId = _currentUser.FornecedorId ?? throw new AppException("Fornecedor não identificado.", 403);
         if (string.IsNullOrWhiteSpace(request.NumeroNotaFiscal)) throw new AppException("Número da nota fiscal é obrigatório.");
+        if (string.IsNullOrWhiteSpace(request.NumeroAf)) throw new AppException("Número da AF é obrigatório.");
 
         var entity = await _context.FinanceiroLiberacoes
             .Include(x => x.Fornecedor)
@@ -830,9 +895,16 @@ public class FinanceiroService
 
         var envio = entity.DocumentoEnviado ?? throw new AppException("Envio documental vinculado não encontrado.", 404);
         var fornecedor = entity.Fornecedor ?? await _context.Fornecedores.FirstAsync(x => x.Id == fornecedorId, ct);
+        var resultadoValidacao = await ValidarNotaFiscalAsync(arquivo, extension, request.NumeroNotaFiscal, request.NumeroAf, fornecedor, ct);
+        if (!resultadoValidacao.Sucesso)
+        {
+            return resultadoValidacao;
+        }
+
         var stored = await _fileStorageService.SaveAsync(fornecedor.CodigoFornecedor, envio.AnoReferencia, envio.MesReferencia, arquivo, ct);
 
         entity.NumeroNotaFiscal = request.NumeroNotaFiscal.Trim();
+        entity.NumeroAf = request.NumeroAf.Trim();
         entity.Observacao = request.Observacao;
         entity.NomeOriginalNotaFiscal = stored.OriginalFileName;
         entity.NomeArquivoFisicoNotaFiscal = stored.FileName;
@@ -846,11 +918,163 @@ public class FinanceiroService
 
         await _context.SaveChangesAsync(ct);
         await _auditService.RegistrarAsync("financeiro_liberacoes", entity.Id, AcaoAuditoria.LiberacaoFinanceiro, $"Nota fiscal {entity.NumeroNotaFiscal} enviada pelo fornecedor.", ct);
-        var mensagem = $"Recebemos a nota fiscal {entity.NumeroNotaFiscal} da competência {envio.MesReferencia:00}/{envio.AnoReferencia}. Ela foi encaminhada para análise do financeiro.";
+        var mensagem = $"Recebemos a nota fiscal {entity.NumeroNotaFiscal} da competência {envio.MesReferencia:00}/{envio.AnoReferencia}. Ela foi encaminhada para análise de Custos.";
         await _notificationService.NotificarFornecedorEmailSmsAsync(fornecedor, "Nota fiscal recebida", mensagem, "financeiro_liberacoes", entity.Id, ct);
         await _notificationService.RegistrarDashboardAdminAsync(
             "Nota fiscal enviada",
-            $"{fornecedor.NomeOuRazaoSocial} enviou a NF {entity.NumeroNotaFiscal} da competência {envio.MesReferencia:00}/{envio.AnoReferencia}.",
+            $"{fornecedor.NomeOuRazaoSocial} enviou a NF {entity.NumeroNotaFiscal} da competência {envio.MesReferencia:00}/{envio.AnoReferencia} para Custos.",
+            "financeiro_liberacoes",
+            entity.Id,
+            ct);
+
+        return resultadoValidacao;
+    }
+
+    private static async Task<EnvioNotaFiscalResultadoResponse> ValidarNotaFiscalAsync(IFormFile arquivo, string extension, string numeroNotaFiscal, string numeroAf, Fornecedor fornecedor, CancellationToken ct)
+    {
+        var conteudo = extension == ".xml"
+            ? await ExtrairConteudoXmlAsync(arquivo, ct)
+            : await ExtrairConteudoPdfAsync(arquivo, ct);
+
+        var nfInformada = NormalizeDigits(numeroNotaFiscal);
+        var afInformada = NormalizeAlphaNumeric(numeroAf);
+        var documentoFornecedor = NormalizeDigits(fornecedor.CpfOuCnpj);
+        var textoNumerico = NormalizeDigits(conteudo.TextoCompleto);
+        var textoNormalizado = NormalizeAlphaNumeric(conteudo.TextoCompleto);
+
+        var textoLido = !string.IsNullOrWhiteSpace(conteudo.TextoCompleto);
+
+        var nfEncontrada = conteudo.NumerosNota.Any(x => NormalizeDigits(x) == nfInformada) || textoNumerico.Contains(nfInformada);
+        var cnpjEncontrado = conteudo.DocumentosPrestador.Any(x => NormalizeDigits(x) == documentoFornecedor) || textoNumerico.Contains(documentoFornecedor);
+        var afExiste = Regex.IsMatch(conteudo.TextoCompleto, @"\bAF\b", RegexOptions.IgnoreCase);
+        var afEncontrada = AfMatches(conteudo.TextoCompleto, textoNormalizado, numeroAf.Trim(), afInformada);
+        var chaveAcessoExiste = conteudo.ChavesAcesso.Any(x => NormalizeDigits(x).Length == 44) ||
+            Regex.IsMatch(textoNumerico, @"\d{44}");
+
+        var checklist = new List<NotaFiscalChecklistItem>
+        {
+            new("NF_NUMERO", "Número da NF", textoLido && !string.IsNullOrWhiteSpace(nfInformada) && nfEncontrada),
+            new("AF_EXISTE", "AF existe na NF", textoLido && afExiste),
+            new("AF_IGUAL", "Número da AF igual a AF da NF", textoLido && !string.IsNullOrWhiteSpace(afInformada) && afEncontrada),
+            new("CNPJ_CONFERE", "CNPJ confere", textoLido && !string.IsNullOrWhiteSpace(documentoFornecedor) && cnpjEncontrado),
+            new("CHAVE_ACESSO", "Chave de Acesso Existe", textoLido && chaveAcessoExiste)
+        };
+
+        return new EnvioNotaFiscalResultadoResponse(checklist.All(x => x.Ok), checklist);
+    }
+
+    private static async Task<NotaFiscalConteudo> ExtrairConteudoXmlAsync(IFormFile arquivo, CancellationToken ct)
+    {
+        await using var stream = arquivo.OpenReadStream();
+        var document = await XDocument.LoadAsync(stream, LoadOptions.None, ct);
+        var elements = document.Descendants().ToList();
+        var textoCompleto = string.Join(" ", elements.Select(x => x.Value));
+        var numerosNota = elements
+            .Where(x => IsXmlElementName(x, "nNF", "numero", "Numero", "NumeroNFe", "NumeroNfse", "NumeroNota", "numeroNota"))
+            .Select(x => x.Value)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var documentosPrestador = elements
+            .Where(x => IsXmlElementName(x, "CNPJ", "Cnpj", "cnpj", "Cpf", "CPF", "CpfCnpj", "CnpjPrestador"))
+            .Select(x => x.Value)
+            .Where(x => NormalizeDigits(x).Length is 11 or 14)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var chavesAcesso = elements
+            .Where(x => IsXmlElementName(x, "chNFe", "chaveAcesso", "ChaveAcesso"))
+            .Select(x => x.Value)
+            .Where(x => NormalizeDigits(x).Length == 44)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new NotaFiscalConteudo(textoCompleto, numerosNota, documentosPrestador, chavesAcesso);
+    }
+
+    private static async Task<NotaFiscalConteudo> ExtrairConteudoPdfAsync(IFormFile arquivo, CancellationToken ct)
+    {
+        await using var stream = arquivo.OpenReadStream();
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, ct);
+        using var pdf = PdfDocument.Open(memory.ToArray());
+        var textoCompleto = string.Join(" ", pdf.GetPages().Select(x => x.Text));
+        var documentos = Regex.Matches(textoCompleto, @"\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}|\d{3}\.?\d{3}\.?\d{3}-?\d{2}")
+            .Select(x => x.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var chavesAcesso = Regex.Matches(NormalizeDigits(textoCompleto), @"\d{44}")
+            .Select(x => x.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new NotaFiscalConteudo(textoCompleto, [], documentos, chavesAcesso);
+    }
+
+    private static bool IsXmlElementName(XElement element, params string[] names) =>
+        names.Any(name => string.Equals(element.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
+
+    private static string NormalizeDigits(string? value) =>
+        Regex.Replace(value ?? string.Empty, @"\D", string.Empty);
+
+    private static string NormalizeAlphaNumeric(string? value) =>
+        Regex.Replace(value ?? string.Empty, @"[^A-Za-z0-9]", string.Empty).ToUpperInvariant();
+
+    private static bool AfMatches(string textoCompleto, string textoNormalizado, string numeroAfOriginal, string numeroAfNormalizado)
+    {
+        if (string.IsNullOrWhiteSpace(numeroAfNormalizado)) return false;
+        if (textoNormalizado.Contains($"AF{numeroAfNormalizado}")) return true;
+
+        return Regex.IsMatch(
+            textoCompleto,
+            $@"\bAF\b\s*[:\-\/]?\s*{Regex.Escape(numeroAfOriginal)}",
+            RegexOptions.IgnoreCase);
+    }
+
+    private sealed record NotaFiscalConteudo(
+        string TextoCompleto,
+        IReadOnlyCollection<string> NumerosNota,
+        IReadOnlyCollection<string> DocumentosPrestador,
+        IReadOnlyCollection<string> ChavesAcesso);
+
+    public async Task EnviarBoletoAsync(long id, EnviarBoletoRequest request, CancellationToken ct)
+    {
+        var fornecedorId = _currentUser.FornecedorId ?? throw new AppException("Fornecedor não identificado.", 403);
+        var entity = await _context.FinanceiroLiberacoes
+            .Include(x => x.Fornecedor)
+            .Include(x => x.DocumentoEnviado)
+            .FirstOrDefaultAsync(x => x.Id == id && x.FornecedorId == fornecedorId, ct)
+            ?? throw new AppException("Liberação de custos não encontrada.", 404);
+
+        if (entity.StatusFinanceiro != StatusFinanceiro.AguardandoPagamento)
+        {
+            throw new AppException("O boleto só pode ser enviado após o envio da nota fiscal.");
+        }
+
+        var arquivo = request.ArquivoBoleto ?? throw new AppException("Anexe o boleto em PDF.");
+        if (arquivo.Length == 0 || arquivo.Length > MaxBoletoFileSize) throw new AppException("Arquivo do boleto inválido ou acima do limite de 10MB.");
+        var extension = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+        if (!BoletoExtensions.Contains(extension)) throw new AppException("O boleto deve ser enviado em PDF.");
+
+        var envio = entity.DocumentoEnviado ?? throw new AppException("Envio documental vinculado não encontrado.", 404);
+        var fornecedor = entity.Fornecedor ?? await _context.Fornecedores.FirstAsync(x => x.Id == fornecedorId, ct);
+        var stored = await _fileStorageService.SaveAsync(fornecedor.CodigoFornecedor, envio.AnoReferencia, envio.MesReferencia, arquivo, ct);
+
+        entity.Observacao = request.Observacao;
+        entity.NomeOriginalBoleto = stored.OriginalFileName;
+        entity.NomeArquivoFisicoBoleto = stored.FileName;
+        entity.CaminhoArquivoBoleto = stored.RelativePath.Replace("\\", "/");
+        entity.ExtensaoBoleto = stored.Extension;
+        entity.TamanhoBytesBoleto = stored.SizeBytes;
+        entity.DataHoraUploadBoleto = DbClock.Now;
+        entity.DataHoraAtualizacao = DbClock.Now;
+
+        await _context.SaveChangesAsync(ct);
+        await _auditService.RegistrarAsync("financeiro_liberacoes", entity.Id, AcaoAuditoria.LiberacaoFinanceiro, $"Boleto {entity.NomeOriginalBoleto} enviado pelo fornecedor.", ct);
+        var mensagem = $"Recebemos o boleto da competência {envio.MesReferencia:00}/{envio.AnoReferencia}. O registro permanece aguardando pagamento em Custos.";
+        await _notificationService.NotificarFornecedorEmailSmsAsync(fornecedor, "Boleto recebido", mensagem, "financeiro_liberacoes", entity.Id, ct);
+        await _notificationService.RegistrarDashboardAdminAsync(
+            "Boleto enviado",
+            $"{fornecedor.NomeOuRazaoSocial} enviou o boleto da competência {envio.MesReferencia:00}/{envio.AnoReferencia}.",
             "financeiro_liberacoes",
             entity.Id,
             ct);
@@ -870,6 +1094,44 @@ public class FinanceiroService
         await _context.SaveChangesAsync(ct);
         await _auditService.RegistrarAsync("financeiro_liberacoes", entity.Id, AcaoAuditoria.LiberacaoFinanceiro, $"Status financeiro alterado para {entity.StatusFinanceiro}.", ct);
     }
+
+    private static string EscapeHtml(string value) =>
+        value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    private static byte[] BuildSimplePdf(IReadOnlyCollection<string> lines)
+    {
+        var objects = new List<string>();
+        objects.Add("<< /Type /Catalog /Pages 2 0 R >>");
+        objects.Add("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        objects.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>");
+        objects.Add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+        var content = new StringBuilder("BT /F1 10 Tf 40 555 Td ");
+        foreach (var line in lines.Take(28))
+        {
+            content.Append('(').Append(EscapePdf(line.Length > 145 ? line[..145] : line)).Append(") Tj 0 -18 Td ");
+        }
+        content.Append("ET");
+        var stream = content.ToString();
+        objects.Add($"<< /Length {Encoding.ASCII.GetByteCount(stream)} >>\nstream\n{stream}\nendstream");
+
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int> { 0 };
+        foreach (var obj in objects.Select((value, index) => new { value, number = index + 1 }))
+        {
+            offsets.Add(Encoding.ASCII.GetByteCount(pdf.ToString()));
+            pdf.Append(obj.number).Append(" 0 obj\n").Append(obj.value).Append("\nendobj\n");
+        }
+        var xref = Encoding.ASCII.GetByteCount(pdf.ToString());
+        pdf.Append("xref\n0 ").Append(objects.Count + 1).Append("\n0000000000 65535 f \n");
+        foreach (var offset in offsets.Skip(1))
+        {
+            pdf.Append(offset.ToString("D10")).Append(" 00000 n \n");
+        }
+        pdf.Append("trailer\n<< /Size ").Append(objects.Count + 1).Append(" /Root 1 0 R >>\nstartxref\n").Append(xref).Append("\n%%EOF");
+        return Encoding.ASCII.GetBytes(pdf.ToString());
+    }
+
+    private static string EscapePdf(string value) => value.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
 }
 
 public class DashboardService
@@ -883,20 +1145,28 @@ public class DashboardService
         _currentUser = currentUser;
     }
 
-    public async Task<DashboardAdminDto> AdminAsync(CancellationToken ct) =>
-        new(
-            await _context.Fornecedores.CountAsync(ct),
-            await _context.DocumentosEnviados.CountAsync(x => x.Status == StatusEnvioMensal.Pendente, ct),
-            await _context.DocumentosEnviados.CountAsync(x => x.Status == StatusEnvioMensal.Enviado, ct),
-            await _context.DocumentosEnviados.CountAsync(x => x.Status == StatusEnvioMensal.EmConformidade, ct),
-            await _context.Contratos.CountAsync(x => x.Ativo, ct),
-            await _context.Notificacoes.CountAsync(x => x.TipoNotificacao == TipoNotificacao.Sistema && x.StatusEnvio == StatusNotificacao.Pendente, ct));
-
-    public async Task<DashboardFornecedorDto> FornecedorAsync(CancellationToken ct)
+    public async Task<DashboardAdminDto> AdminAsync(short? mesReferencia, short? anoReferencia, CancellationToken ct)
     {
+        var competencia = ResolveCompetencia(mesReferencia, anoReferencia);
+        var inicioCompetencia = new DateTime(competencia.Ano, competencia.Mes, 1);
+        var fimCompetencia = inicioCompetencia.AddMonths(1);
+
+        return new DashboardAdminDto(
+            await _context.Fornecedores.CountAsync(ct),
+            await _context.DocumentosEnviados.CountAsync(x => x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano && x.Status == StatusEnvioMensal.Pendente, ct),
+            await _context.DocumentosEnviados.CountAsync(x => x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano && x.Status == StatusEnvioMensal.Enviado, ct),
+            await _context.DocumentosEnviados.CountAsync(x => x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano && x.Status == StatusEnvioMensal.EmConformidade, ct),
+            await _context.Contratos.CountAsync(x => x.Ativo, ct),
+            await _context.Notificacoes.CountAsync(x => x.TipoNotificacao == TipoNotificacao.Sistema && x.StatusEnvio == StatusNotificacao.Pendente && x.DataHoraCriacao >= inicioCompetencia && x.DataHoraCriacao < fimCompetencia, ct));
+    }
+
+    public async Task<DashboardFornecedorDto> FornecedorAsync(short? mesReferencia, short? anoReferencia, CancellationToken ct)
+    {
+        var competencia = ResolveCompetencia(mesReferencia, anoReferencia);
+        var inicioCompetencia = new DateTime(competencia.Ano, competencia.Mes, 1);
+        var fimCompetencia = inicioCompetencia.AddMonths(1);
         var fornecedorId = _currentUser.FornecedorId ?? throw new AppException("Fornecedor não identificado.", 403);
-        var now = DateTime.UtcNow;
-        var envio = await _context.DocumentosEnviados.AsNoTracking().FirstOrDefaultAsync(x => x.FornecedorId == fornecedorId && x.MesReferencia == now.Month && x.AnoReferencia == now.Year, ct);
+        var envio = await _context.DocumentosEnviados.AsNoTracking().FirstOrDefaultAsync(x => x.FornecedorId == fornecedorId && x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano, ct);
         var docsFaltantes = 0;
 
         if (envio is not null)
@@ -913,16 +1183,32 @@ public class DashboardService
         return new DashboardFornecedorDto(
             envio?.Status.ToString() ?? "SEM_ENVIO",
             docsFaltantes,
-            await _context.DocumentosEnviados.CountAsync(x => x.FornecedorId == fornecedorId, ct),
-            await _context.Notificacoes.CountAsync(x => x.FornecedorId == fornecedorId, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct));
+            await _context.DocumentosEnviados.CountAsync(x => x.FornecedorId == fornecedorId && x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano, ct),
+            await _context.Notificacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.DataHoraCriacao >= inicioCompetencia && x.DataHoraCriacao < fimCompetencia, ct),
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct));
     }
 
-    public async Task<DashboardFinanceiroDto> FinanceiroAsync(CancellationToken ct) =>
-        new(
-            await _context.DocumentosEnviados.CountAsync(x => x.Status == StatusEnvioMensal.EmConformidade, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.StatusFinanceiro == StatusFinanceiro.EmAnaliseFinanceira, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.StatusFinanceiro == StatusFinanceiro.LiberadoParaPagamento, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.StatusFinanceiro == StatusFinanceiro.Pago, ct));
+    public async Task<DashboardFinanceiroDto> FinanceiroAsync(short? mesReferencia, short? anoReferencia, CancellationToken ct)
+    {
+        var competencia = ResolveCompetencia(mesReferencia, anoReferencia);
+
+        return new DashboardFinanceiroDto(
+            await _context.DocumentosEnviados.CountAsync(x => x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano && x.Status == StatusEnvioMensal.EmConformidade, ct),
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct),
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.EmAnaliseFinanceira, ct),
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.LiberadoParaPagamento, ct),
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.Pago, ct));
+    }
+
+    private static (short Mes, short Ano) ResolveCompetencia(short? mesReferencia, short? anoReferencia)
+    {
+        var now = DbClock.Now;
+        var mes = mesReferencia.GetValueOrDefault((short)now.Month);
+        var ano = anoReferencia.GetValueOrDefault((short)now.Year);
+
+        if (mes < 1 || mes > 12) throw new AppException("Mês de referência inválido.");
+        if (ano < 2000 || ano > 2100) throw new AppException("Ano de referência inválido.");
+
+        return (mes, ano);
+    }
 }

@@ -1,16 +1,39 @@
 <section class="page-shell dashboard-shell">
   <div class="toolbar dashboard-header">
     <div>
-      <h2>Dashboard {{ role }}</h2>
-      <p>Indicadores resumidos por perfil.</p>
+      <h2>Dashboard {{ roleLabel }}</h2>
+      <p>Indicadores resumidos por perfil e competência.</p>
     </div>
   </div>
+
+  <form class="dashboard-filter card" (ngSubmit)="load()">
+    <div class="filter-copy">
+      <strong>Competência para averiguação</strong>
+      <span>Informe o mês e o ano que deseja consultar.</span>
+    </div>
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-sm-4 col-lg-3">
+        <label class="form-label">Mês</label>
+        <input class="form-control" type="number" min="1" max="12" name="mesReferencia" [(ngModel)]="filtro.mesReferencia">
+      </div>
+      <div class="col-12 col-sm-4 col-lg-3">
+        <label class="form-label">Ano</label>
+        <input class="form-control" type="number" min="2000" max="2100" name="anoReferencia" [(ngModel)]="filtro.anoReferencia">
+      </div>
+      <div class="col-12 col-sm-4 col-lg-3">
+        <button class="btn btn-primary w-100" type="submit" [disabled]="loading">
+          <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+          Averiguar
+        </button>
+      </div>
+    </div>
+  </form>
 
   <div class="dashboard-board">
     <div class="dashboard-summary">
       <span class="summary-kicker">Visão geral</span>
       <strong>{{ entries().length }}</strong>
-      <span>indicadores acompanhados</span>
+      <span>indicadores acompanhados em {{ filtro.mesReferencia }}/{{ filtro.anoReferencia }}</span>
     </div>
 
     <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 dashboard-cards">
@@ -20,7 +43,7 @@
             <span class="tile-icon">{{ labelFor(item.key).charAt(0) }}</span>
           </div>
           <div class="tile-content">
-            <div class="stat-value">{{ item.value }}</div>
+            <div class="stat-value" [class.text-value]="!isNumber(item.value)">{{ valueLabel(item.value) }}</div>
             <div class="stat-label">{{ labelFor(item.key) }}</div>
           </div>
         </article>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-fornecedores',
@@ -11,6 +12,9 @@ export class FornecedoresComponent implements OnInit {
   categorias: any[] = [];
   form;
   editingId: number | null = null;
+  arquivoImportacao: File | null = null;
+  importando = false;
+  resultadoImportacao: any[] = [];
 
   constructor(private readonly api: ApiService, private readonly fb: FormBuilder) {
     this.form = this.fb.group({
@@ -66,6 +70,30 @@ export class FornecedoresComponent implements OnInit {
   remove(item: any): void {
     if (!confirm(`Excluir fornecedor ${item.codigoFornecedor}?`)) return;
     this.api.delete(`/fornecedores/${item.id}`).subscribe(() => this.load());
+  }
+
+  onImportFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.arquivoImportacao = input.files?.[0] ?? null;
+  }
+
+  importarExcel(): void {
+    if (!this.arquivoImportacao) return;
+    const formData = new FormData();
+    formData.append('arquivo', this.arquivoImportacao);
+    this.importando = true;
+    fetch(`${environment.apiUrl}/fornecedores/importacao-excel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('dalba_auth') ? JSON.parse(localStorage.getItem('dalba_auth') as string).token : ''}` },
+      body: formData
+    }).then(async (response) => {
+      this.importando = false;
+      if (!response.ok) throw new Error('Falha na importação.');
+      this.resultadoImportacao = await response.json();
+      this.load();
+    }).catch(() => {
+      this.importando = false;
+    });
   }
 
   cancelEdit(): void {

@@ -21,6 +21,12 @@ public static class Seeder
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS extensao_nota_fiscal VARCHAR(10) NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS tamanho_bytes_nota_fiscal BIGINT NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS data_hora_upload_nota_fiscal TIMESTAMP NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS nome_original_boleto VARCHAR(255) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS nome_arquivo_fisico_boleto VARCHAR(255) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS caminho_arquivo_boleto VARCHAR(255) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS extensao_boleto VARCHAR(10) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS tamanho_bytes_boleto BIGINT NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS data_hora_upload_boleto TIMESTAMP NULL;");
 
         if (!context.Categorias.Any())
         {

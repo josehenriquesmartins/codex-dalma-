@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { AdminValidacaoComponent } from './pages/admin-validacao/admin-validacao.component';
 import { CategoriasComponent } from './pages/categorias/categorias.component';
 import { ContratosComponent } from './pages/contratos/contratos.component';
+import { ConfiguracoesComponent } from './pages/configuracoes/configuracoes.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { DocumentosCatalogoComponent } from './pages/documentos-catalogo/documentos-catalogo.component';
 import { DocumentosExigidosComponent } from './pages/documentos-exigidos/documentos-exigidos.component';
@@ -37,7 +38,8 @@ const routes: Routes = [
       { path: 'envio-nf', component: EnvioNfComponent, canActivate: [RoleGuard], data: { roles: ['Fornecedor'] } },
       { path: 'admin-validacao', component: AdminValidacaoComponent, canActivate: [RoleGuard], data: { roles: ['Admin', 'Financeiro'] } },
       { path: 'financeiro', component: FinanceiroComponent, canActivate: [RoleGuard], data: { roles: ['Admin', 'Financeiro'] } },
-      { path: 'notificacoes', component: NotificacoesComponent }
+      { path: 'notificacoes', component: NotificacoesComponent },
+      { path: 'configuracoes', component: ConfiguracoesComponent, canActivate: [RoleGuard], data: { roles: ['Admin'] } }
     ]
   },
   { path: '**', redirectTo: 'dashboard' }

@@ -11,13 +11,16 @@ public class DashboardController : ControllerBase
 {
     [HttpGet("admin")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> Admin([FromServices] DashboardService service, CancellationToken ct) => Ok(await service.AdminAsync(ct));
+    public async Task<IActionResult> Admin([FromServices] DashboardService service, [FromQuery] short? mesReferencia, [FromQuery] short? anoReferencia, CancellationToken ct) =>
+        Ok(await service.AdminAsync(mesReferencia, anoReferencia, ct));
 
     [HttpGet("fornecedor")]
     [Authorize(Policy = "FornecedorOnly")]
-    public async Task<IActionResult> Fornecedor([FromServices] DashboardService service, CancellationToken ct) => Ok(await service.FornecedorAsync(ct));
+    public async Task<IActionResult> Fornecedor([FromServices] DashboardService service, [FromQuery] short? mesReferencia, [FromQuery] short? anoReferencia, CancellationToken ct) =>
+        Ok(await service.FornecedorAsync(mesReferencia, anoReferencia, ct));
 
     [HttpGet("financeiro")]
     [Authorize(Policy = "AdminOrFinanceiro")]
-    public async Task<IActionResult> Financeiro([FromServices] DashboardService service, CancellationToken ct) => Ok(await service.FinanceiroAsync(ct));
+    public async Task<IActionResult> Financeiro([FromServices] DashboardService service, [FromQuery] short? mesReferencia, [FromQuery] short? anoReferencia, CancellationToken ct) =>
+        Ok(await service.FinanceiroAsync(mesReferencia, anoReferencia, ct));
 }

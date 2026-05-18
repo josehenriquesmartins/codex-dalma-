@@ -9,7 +9,13 @@ using Dalba.Financeiro.Application.DTOs.Fornecedores;
 using Dalba.Financeiro.Application.DTOs.Usuarios;
 using Dalba.Financeiro.Domain.Entities;
 using Dalba.Financeiro.Domain.Enums;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.IO.Compression;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Dalba.Financeiro.Application.Services;
 
@@ -153,6 +159,7 @@ public class CategoriaService
 
 public class FornecedorService
 {
+    private static readonly string[] ImportExtensions = [".xlsx", ".csv"];
     private readonly IAppDbContext _context;
     private readonly IAuditService _auditService;
 
@@ -257,6 +264,49 @@ public class FornecedorService
         await _auditService.RegistrarAsync("fornecedores", id, AcaoAuditoria.Exclusao, $"Fornecedor {entity.CodigoFornecedor} excluído.", ct);
     }
 
+    public async Task<IReadOnlyCollection<FornecedorImportacaoResultado>> ImportarAsync(IFormFile arquivo, CancellationToken ct)
+    {
+        if (arquivo.Length == 0) throw new AppException("Arquivo de importação vazio.");
+        var extension = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+        if (!ImportExtensions.Contains(extension)) throw new AppException("Envie uma planilha .xlsx ou .csv exportada pelo Excel.");
+
+        var rows = extension == ".xlsx"
+            ? await ReadXlsxAsync(arquivo, ct)
+            : await ReadCsvAsync(arquivo, ct);
+
+        var resultados = new List<FornecedorImportacaoResultado>();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            var linha = i + 2;
+            var codigo = Get(row, "codigo", "codigofornecedor", "codfornecedor");
+            var nome = Get(row, "nomeourazaosocial", "nome", "razaosocial", "prestador", "fornecedor");
+
+            try
+            {
+                var request = await BuildImportRequestAsync(row, ct);
+                var existente = await _context.Fornecedores.FirstOrDefaultAsync(x => x.CodigoFornecedor == request.CodigoFornecedor, ct);
+                if (existente is null)
+                {
+                    await CreateAsync(request, ct);
+                    resultados.Add(new FornecedorImportacaoResultado(linha, request.CodigoFornecedor, request.NomeOuRazaoSocial, true, "Incluído."));
+                }
+                else
+                {
+                    await UpdateAsync(existente.Id, request, ct);
+                    resultados.Add(new FornecedorImportacaoResultado(linha, request.CodigoFornecedor, request.NomeOuRazaoSocial, true, "Atualizado."));
+                }
+            }
+            catch (Exception ex)
+            {
+                resultados.Add(new FornecedorImportacaoResultado(linha, codigo, nome, false, ex.Message));
+            }
+        }
+
+        await _auditService.RegistrarAsync("fornecedores", null, AcaoAuditoria.Edicao, $"Importação de fornecedores: {resultados.Count(x => x.Importado)} importados de {resultados.Count} linha(s).", ct);
+        return resultados;
+    }
+
     private async Task ValidateFornecedorAsync(FornecedorRequest request, long? id, CancellationToken ct)
     {
         if (!await _context.Categorias.AnyAsync(x => x.Id == request.CategoriaId && x.Ativo, ct)) throw new AppException("Categoria obrigatória e inválida.");
@@ -304,6 +354,231 @@ public class FornecedorService
         usuario.Perfil = PerfilAcesso.Fornecedor;
         usuario.Ativo = fornecedor.Ativo;
         usuario.DataHoraAtualizacao = DbClock.Now;
+    }
+
+    private async Task<FornecedorRequest> BuildImportRequestAsync(Dictionary<string, string> row, CancellationToken ct)
+    {
+        var tipoPessoa = ParseTipoPessoa(GetRequired(row, "tipopessoa", "tipo"));
+        var documento = ValidationHelper.SomenteDigitos(GetRequired(row, "cpfoucnpj", "cpfcnpj", "documento", tipoPessoa == TipoPessoa.Fisica ? "cpf" : "cnpj"));
+        var categoriaId = await ResolveCategoriaIdAsync(GetRequired(row, "categoria", "categoriaid", "categoriacodigo"), ct);
+        var telefone = ValidationHelper.SomenteDigitos(Get(row, "telefone", "numerotelefone", "celular"));
+        var ddd = ValidationHelper.SomenteDigitos(Get(row, "ddd", "dddtelefone"));
+        if (string.IsNullOrWhiteSpace(ddd) && telefone.Length > 9)
+        {
+            ddd = telefone[..2];
+            telefone = telefone[2..];
+        }
+
+        return new FornecedorRequest(
+            GetRequired(row, "codigo", "codigofornecedor", "codfornecedor"),
+            tipoPessoa,
+            tipoPessoa == TipoPessoa.Fisica ? null : ParsePorte(Get(row, "porte", "porteempresa")),
+            categoriaId,
+            GetRequired(row, "nomeourazaosocial", "nome", "razaosocial", "prestador", "fornecedor"),
+            Get(row, "nomefantasia", "fantasia"),
+            documento,
+            Get(row, "ddi", "dditelefone") is { Length: > 0 } ddi ? ddi : "+55",
+            string.IsNullOrWhiteSpace(ddd) ? "00" : ddd,
+            string.IsNullOrWhiteSpace(telefone) ? "000000000" : telefone,
+            GetRequired(row, "email", "e-mail"),
+            Get(row, "cep") is { Length: > 0 } cep ? cep : "00000000",
+            Get(row, "logradouro", "endereco") is { Length: > 0 } logradouro ? logradouro : "Não informado",
+            Get(row, "numero", "numeroendereco") is { Length: > 0 } numero ? numero : "S/N",
+            Get(row, "complemento"),
+            Get(row, "bairro") is { Length: > 0 } bairro ? bairro : "Não informado",
+            Get(row, "cidade", "municipio") is { Length: > 0 } cidade ? cidade : "Não informado",
+            Get(row, "estado", "uf") is { Length: > 0 } estado ? estado : "PR",
+            Get(row, "pais", "país") is { Length: > 0 } pais ? pais : "Brasil",
+            ParseBool(Get(row, "ativo")));
+    }
+
+    private async Task<long> ResolveCategoriaIdAsync(string value, CancellationToken ct)
+    {
+        if (long.TryParse(value, out var id) && await _context.Categorias.AnyAsync(x => x.Id == id, ct)) return id;
+        var normalized = NormalizeHeader(value);
+        var categoria = await _context.Categorias.FirstOrDefaultAsync(x =>
+            x.Codigo.ToLower() == value.ToLower() ||
+            x.Descricao.ToLower() == value.ToLower(), ct);
+        if (categoria is not null) return categoria.Id;
+
+        var categorias = await _context.Categorias.AsNoTracking().ToListAsync(ct);
+        categoria = categorias.FirstOrDefault(x =>
+            NormalizeHeader(x.Codigo) == normalized ||
+            NormalizeHeader(x.Descricao) == normalized);
+
+        return categoria?.Id ?? throw new AppException($"Categoria '{value}' não encontrada.");
+    }
+
+    private static TipoPessoa ParseTipoPessoa(string value)
+    {
+        var normalized = NormalizeHeader(value);
+        if (normalized is "pf" or "fisica" or "pessoafisica") return TipoPessoa.Fisica;
+        if (normalized is "pj" or "juridica" or "pessoajuridica") return TipoPessoa.Juridica;
+        throw new AppException($"Tipo de pessoa inválido: {value}.");
+    }
+
+    private static PorteEmpresa? ParsePorte(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var normalized = NormalizeHeader(value);
+        return normalized switch
+        {
+            "mei" => PorteEmpresa.Mei,
+            "microempresa" or "micro" => PorteEmpresa.Microempresa,
+            "pequenaempresa" or "pequena" => PorteEmpresa.PequenaEmpresa,
+            "mediaempresa" or "media" => PorteEmpresa.MediaEmpresa,
+            "grandeempresa" or "grande" => PorteEmpresa.GrandeEmpresa,
+            _ => throw new AppException($"Porte inválido: {value}.")
+        };
+    }
+
+    private static bool ParseBool(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        var normalized = NormalizeHeader(value);
+        return normalized is "sim" or "s" or "true" or "1" or "ativo";
+    }
+
+    private static string GetRequired(Dictionary<string, string> row, params string[] keys)
+    {
+        var value = Get(row, keys);
+        if (string.IsNullOrWhiteSpace(value)) throw new AppException($"Campo obrigatório ausente: {keys[0]}.");
+        return value.Trim();
+    }
+
+    private static string Get(Dictionary<string, string> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (row.TryGetValue(NormalizeHeader(key), out var value)) return value.Trim();
+        }
+
+        return string.Empty;
+    }
+
+    private static async Task<List<Dictionary<string, string>>> ReadCsvAsync(IFormFile arquivo, CancellationToken ct)
+    {
+        await using var stream = arquivo.OpenReadStream();
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        var content = await reader.ReadToEndAsync(ct);
+        var lines = content.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length < 2) return [];
+        var separator = lines[0].Contains(';') ? ';' : ',';
+        var headers = SplitCsvLine(lines[0], separator).Select(NormalizeHeader).ToList();
+        return lines.Skip(1).Select(line => ToDictionary(headers, SplitCsvLine(line, separator))).ToList();
+    }
+
+    private static async Task<List<Dictionary<string, string>>> ReadXlsxAsync(IFormFile arquivo, CancellationToken ct)
+    {
+        await using var memory = new MemoryStream();
+        await arquivo.CopyToAsync(memory, ct);
+        memory.Position = 0;
+
+        using var archive = new ZipArchive(memory, ZipArchiveMode.Read);
+        var sharedStrings = ReadSharedStrings(archive);
+        var sheetEntry = archive.GetEntry("xl/worksheets/sheet1.xml") ?? throw new AppException("A planilha precisa ter a primeira aba preenchida.");
+        await using var sheetStream = sheetEntry.Open();
+        var sheet = await XDocument.LoadAsync(sheetStream, LoadOptions.None, ct);
+        XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        var rows = sheet.Descendants(ns + "row").ToList();
+        if (rows.Count < 2) return [];
+
+        var headers = rows[0].Elements(ns + "c")
+            .Select(c => NormalizeHeader(ReadCell(c, sharedStrings, ns)))
+            .ToList();
+
+        return rows.Skip(1)
+            .Select(row => ToDictionary(headers, row.Elements(ns + "c").Select(c => ReadCell(c, sharedStrings, ns)).ToList(), row.Elements(ns + "c").Select(c => ColumnIndex(c.Attribute("r")?.Value)).ToList()))
+            .Where(row => row.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            .ToList();
+    }
+
+    private static List<string> ReadSharedStrings(ZipArchive archive)
+    {
+        var entry = archive.GetEntry("xl/sharedStrings.xml");
+        if (entry is null) return [];
+        using var stream = entry.Open();
+        var doc = XDocument.Load(stream);
+        XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        return doc.Descendants(ns + "si").Select(si => string.Concat(si.Descendants(ns + "t").Select(t => t.Value))).ToList();
+    }
+
+    private static string ReadCell(XElement cell, List<string> sharedStrings, XNamespace ns)
+    {
+        var value = cell.Element(ns + "v")?.Value ?? string.Empty;
+        if (cell.Attribute("t")?.Value == "s" && int.TryParse(value, out var index) && index >= 0 && index < sharedStrings.Count)
+        {
+            return sharedStrings[index];
+        }
+
+        return value;
+    }
+
+    private static Dictionary<string, string> ToDictionary(List<string> headers, List<string> values, List<int>? indexes = null)
+    {
+        var row = new Dictionary<string, string>();
+        for (var i = 0; i < values.Count; i++)
+        {
+            var headerIndex = indexes is null ? i : indexes[i] - 1;
+            if (headerIndex < 0 || headerIndex >= headers.Count) continue;
+            if (!string.IsNullOrWhiteSpace(headers[headerIndex])) row[headers[headerIndex]] = values[i];
+        }
+
+        return row;
+    }
+
+    private static int ColumnIndex(string? reference)
+    {
+        var letters = new string((reference ?? string.Empty).TakeWhile(char.IsLetter).ToArray());
+        var index = 0;
+        foreach (var letter in letters.ToUpperInvariant())
+        {
+            index = (index * 26) + letter - 'A' + 1;
+        }
+
+        return index;
+    }
+
+    private static List<string> SplitCsvLine(string line, char separator)
+    {
+        var result = new List<string>();
+        var current = new StringBuilder();
+        var inQuotes = false;
+        foreach (var ch in line)
+        {
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (ch == separator && !inQuotes)
+            {
+                result.Add(current.ToString());
+                current.Clear();
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        result.Add(current.ToString());
+        return result;
+    }
+
+    private static string NormalizeHeader(string value)
+    {
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder();
+        foreach (var ch in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark && char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToLowerInvariant(ch));
+            }
+        }
+
+        return Regex.Replace(builder.ToString(), "[^a-z0-9]", string.Empty);
     }
 }
 

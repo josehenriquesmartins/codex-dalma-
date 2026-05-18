@@ -226,6 +226,7 @@ public class FinanceiroLiberacaoConfiguration : IEntityTypeConfiguration<Finance
         builder.Property(x => x.GeradoPorUsuarioId).HasColumnName("gerado_por_usuario_id").IsRequired();
         builder.Property(x => x.Observacao).HasColumnName("observacao").HasMaxLength(500);
         builder.Property(x => x.NumeroNotaFiscal).HasColumnName("numero_nota_fiscal").HasMaxLength(60);
+        builder.Property(x => x.NumeroAf).HasColumnName("numero_af").HasMaxLength(60);
         builder.Property(x => x.NomeOriginalNotaFiscal).HasColumnName("nome_original_nota_fiscal").HasMaxLength(255);
         builder.Property(x => x.NomeArquivoFisicoNotaFiscal).HasColumnName("nome_arquivo_fisico_nota_fiscal").HasMaxLength(255);
         builder.Property(x => x.CaminhoArquivoNotaFiscal).HasColumnName("caminho_arquivo_nota_fiscal").HasMaxLength(255);
@@ -233,6 +234,12 @@ public class FinanceiroLiberacaoConfiguration : IEntityTypeConfiguration<Finance
         builder.Property(x => x.TamanhoBytesNotaFiscal).HasColumnName("tamanho_bytes_nota_fiscal");
         builder.Property(x => x.DataRecebimentoNotaFiscal).HasColumnName("data_recebimento_nota_fiscal").HasColumnType("timestamp");
         builder.Property(x => x.DataHoraUploadNotaFiscal).HasColumnName("data_hora_upload_nota_fiscal").HasColumnType("timestamp");
+        builder.Property(x => x.NomeOriginalBoleto).HasColumnName("nome_original_boleto").HasMaxLength(255);
+        builder.Property(x => x.NomeArquivoFisicoBoleto).HasColumnName("nome_arquivo_fisico_boleto").HasMaxLength(255);
+        builder.Property(x => x.CaminhoArquivoBoleto).HasColumnName("caminho_arquivo_boleto").HasMaxLength(255);
+        builder.Property(x => x.ExtensaoBoleto).HasColumnName("extensao_boleto").HasMaxLength(10);
+        builder.Property(x => x.TamanhoBytesBoleto).HasColumnName("tamanho_bytes_boleto");
+        builder.Property(x => x.DataHoraUploadBoleto).HasColumnName("data_hora_upload_boleto").HasColumnType("timestamp");
         builder.HasIndex(x => x.DocumentoEnviadoId).IsUnique();
         builder.HasOne(x => x.DocumentoEnviado).WithMany(x => x.LiberacoesFinanceiras).HasForeignKey(x => x.DocumentoEnviadoId);
         builder.HasOne(x => x.Fornecedor).WithMany(x => x.LiberacoesFinanceiras).HasForeignKey(x => x.FornecedorId);

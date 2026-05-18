@@ -1,5 +1,6 @@
 using System.Text;
 using Dalba.Financeiro.Application.Abstractions.Audit;
+using Dalba.Financeiro.Application.Abstractions.Integrations;
 using Dalba.Financeiro.Application.Abstractions.Notifications;
 using Dalba.Financeiro.Application.Abstractions.Persistence;
 using Dalba.Financeiro.Application.Abstractions.Security;
@@ -7,6 +8,7 @@ using Dalba.Financeiro.Application.Abstractions.Storage;
 using Dalba.Financeiro.Application.Services;
 using Dalba.Financeiro.Infrastructure.Audit;
 using Dalba.Financeiro.Infrastructure.Configuration;
+using Dalba.Financeiro.Infrastructure.Integrations;
 using Dalba.Financeiro.Infrastructure.Notifications;
 using Dalba.Financeiro.Infrastructure.Persistence;
 using Dalba.Financeiro.Infrastructure.Security;
@@ -26,6 +28,7 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
         services.Configure<SmsSettings>(configuration.GetSection(SmsSettings.SectionName));
+        services.Configure<ProtheusSettings>(configuration.GetSection("Protheus"));
         services.PostConfigure<SmsSettings>(settings =>
         {
             settings.Provider = configuration["SMS_PROVIDER"] ?? settings.Provider;
@@ -43,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IProtheusIntegrationService, MockProtheusIntegrationService>();
         services.AddScoped<INotificationDispatcher, SmtpNotificationDispatcher>();
         services.AddScoped<IAuditService, AuditService>();
 
@@ -56,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<NotificationService>();
         services.AddScoped<AdminValidationService>();
         services.AddScoped<FinanceiroService>();
+        services.AddScoped<SystemConfigurationService>();
         services.AddScoped<DashboardService>();
 
         var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();

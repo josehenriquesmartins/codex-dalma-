@@ -19,6 +19,11 @@ public class FornecedoresController : ControllerBase
     public async Task<IActionResult> Post([FromServices] FornecedorService service, [FromBody] FornecedorRequest request, CancellationToken ct)
         => Ok(new { id = await service.CreateAsync(request, ct) });
 
+    [HttpPost("importacao-excel")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> ImportarExcel([FromServices] FornecedorService service, IFormFile arquivo, CancellationToken ct)
+        => Ok(await service.ImportarAsync(arquivo, ct));
+
     [HttpPut("{id:long}")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Put([FromServices] FornecedorService service, long id, [FromBody] FornecedorRequest request, CancellationToken ct)

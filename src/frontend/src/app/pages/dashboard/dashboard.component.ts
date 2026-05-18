@@ -10,17 +10,42 @@ import { AuthService } from '../../core/auth.service';
 export class DashboardComponent implements OnInit {
   data: Record<string, number | string> = {};
   role = '';
+  roleLabel = '';
+  filtro = {
+    mesReferencia: new Date().getMonth() + 1,
+    anoReferencia: new Date().getFullYear()
+  };
+  loading = false;
 
   constructor(private readonly api: ApiService, private readonly auth: AuthService) {}
 
   ngOnInit(): void {
     this.role = this.auth.role ?? '';
+    this.roleLabel = this.role === 'Financeiro' ? 'Custo' : this.role;
+    this.load();
+  }
+
+  load(): void {
+    const mes = Number(this.filtro.mesReferencia);
+    const ano = Number(this.filtro.anoReferencia);
+    if (mes < 1 || mes > 12 || ano < 2000) return;
+
     const path = this.role === 'Fornecedor' ? '/dashboard/fornecedor' : this.role === 'Financeiro' ? '/dashboard/financeiro' : '/dashboard/admin';
-    this.api.get<Record<string, number | string>>(path).subscribe((data) => this.data = data);
+    const query = `?mesReferencia=${mes}&anoReferencia=${ano}`;
+    this.loading = true;
+    this.api.get<Record<string, number | string>>(`${path}${query}`).subscribe({
+      next: (data) => this.data = data,
+      complete: () => this.loading = false,
+      error: () => this.loading = false
+    });
   }
 
   entries(): Array<{ key: string; value: number | string }> {
     return Object.entries(this.data).map(([key, value]) => ({ key, value }));
+  }
+
+  isNumber(value: number | string): boolean {
+    return typeof value === 'number';
   }
 
   labelFor(key: string): string {
@@ -36,10 +61,39 @@ export class DashboardComponent implements OnInit {
       documentosPendentes: 'Documentos pendentes',
       documentosEnviados: 'Documentos enviados',
       documentosAprovados: 'Documentos aprovados',
-      documentosReprovados: 'Documentos reprovados'
+      documentosReprovados: 'Documentos reprovados',
+      situacaoMesAtual: 'Situação do mês atual',
+      ultimosEnvios: 'Últimos envios',
+      notificacoesRecebidas: 'Notificações recebidas',
+      notasAguardadas: 'Notas aguardadas',
+      emAnalise: 'Em análise',
+      liberados: 'Liberados',
+      pagos: 'Pagos',
+      contratosAtivos: 'Contratos ativos'
     };
 
-    return labels[key] ?? key
+    return labels[key] ?? this.humanize(key);
+  }
+
+  valueLabel(value: number | string): string {
+    if (typeof value !== 'string') return String(value);
+    const labels: Record<string, string> = {
+      EmConformidade: 'Em Conformidade',
+      AguardandoEnvioNf: 'Aguardando envio de NF',
+      AguardandoPagamento: 'Aguardando pagamento',
+      EmAnaliseFinanceira: 'Em análise',
+      LiberadoParaPagamento: 'Liberado para pagamento',
+      Pago: 'Pago',
+      Pendente: 'Pendente',
+      Enviado: 'Enviado',
+      SEM_ENVIO: 'Sem envio'
+    };
+
+    return labels[value] ?? this.humanize(value);
+  }
+
+  private humanize(value: string): string {
+    return value
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (value) => value.toUpperCase())
       .trim();

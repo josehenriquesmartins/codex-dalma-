@@ -12,6 +12,7 @@ import { UsuariosComponent } from './pages/usuarios/usuarios.component';
 import { FornecedoresComponent } from './pages/fornecedores/fornecedores.component';
 import { CategoriasComponent } from './pages/categorias/categorias.component';
 import { ContratosComponent } from './pages/contratos/contratos.component';
+import { ConfiguracoesComponent } from './pages/configuracoes/configuracoes.component';
 import { DocumentosCatalogoComponent } from './pages/documentos-catalogo/documentos-catalogo.component';
 import { DocumentosExigidosComponent } from './pages/documentos-exigidos/documentos-exigidos.component';
 import { PortalFornecedorComponent } from './pages/portal-fornecedor/portal-fornecedor.component';
@@ -33,6 +34,7 @@ import { JwtInterceptor } from './core/jwt.interceptor';
     FornecedoresComponent,
     CategoriasComponent,
     ContratosComponent,
+    ConfiguracoesComponent,
     DocumentosCatalogoComponent,
     DocumentosExigidosComponent,
     PortalFornecedorComponent,

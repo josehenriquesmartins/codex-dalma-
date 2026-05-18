@@ -47,3 +47,10 @@ public sealed record FornecedorResponse(
     string Estado,
     string Pais,
     bool Ativo);
+
+public sealed record FornecedorImportacaoResultado(
+    int Linha,
+    string CodigoFornecedor,
+    string NomeOuRazaoSocial,
+    bool Importado,
+    string Mensagem);

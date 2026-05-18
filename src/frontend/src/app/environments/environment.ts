@@ -1,3 +1,5 @@
+const apiHost = window.location.hostname || 'localhost';
+
 export const environment = {
-  apiUrl: 'http://localhost:5048/api'
+  apiUrl: `http://${apiHost}:8080/api`
 };

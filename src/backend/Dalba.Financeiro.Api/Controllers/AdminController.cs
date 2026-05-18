@@ -31,4 +31,14 @@ public class AdminController : ControllerBase
         await service.ValidarDocumentoAsync(documentoRegistradoId, request, ct);
         return NoContent();
     }
+
+    [HttpGet("configuracoes")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> GetConfiguracoes([FromServices] SystemConfigurationService service, CancellationToken ct) =>
+        Ok(await service.GetAsync(ct));
+
+    [HttpPut("configuracoes")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> SalvarConfiguracoes([FromServices] SystemConfigurationService service, [FromBody] SalvarConfiguracaoSistemaRequest request, CancellationToken ct) =>
+        Ok(await service.SaveAsync(request, ct));
 }

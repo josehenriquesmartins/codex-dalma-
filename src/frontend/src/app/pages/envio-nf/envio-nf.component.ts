@@ -10,11 +10,17 @@ export class EnvioNfComponent implements OnInit {
   liberacoes: any[] = [];
   selecionada: any | null = null;
   numeroNotaFiscal = '';
+  numeroAf = '';
   observacao = '';
   arquivoNotaFiscal: File | null = null;
+  boletoSelecionado: any | null = null;
+  arquivoBoleto: File | null = null;
   attempted = false;
+  attemptedBoleto = false;
   carregando = false;
   enviando = false;
+  enviandoBoleto = false;
+  checklist: Array<{ titulo: string; ok: boolean }> = [];
 
   constructor(private readonly api: ApiService) {}
 
@@ -25,6 +31,7 @@ export class EnvioNfComponent implements OnInit {
   load(): void {
     this.carregando = true;
     this.selecionada = null;
+    this.boletoSelecionado = null;
     this.api.get<any[]>('/notas-fiscais/minhas-liberacoes').subscribe({
       next: (res) => {
         this.liberacoes = res;
@@ -40,22 +47,39 @@ export class EnvioNfComponent implements OnInit {
   selecionar(item: any): void {
     this.selecionada = item;
     this.numeroNotaFiscal = item.numeroNotaFiscal || '';
+    this.numeroAf = item.numeroAf || '';
     this.observacao = '';
     this.arquivoNotaFiscal = null;
     this.attempted = false;
+    this.checklist = [];
+  }
+
+  selecionarBoleto(item: any): void {
+    this.boletoSelecionado = item;
+    this.observacao = '';
+    this.arquivoBoleto = null;
+    this.attemptedBoleto = false;
   }
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.arquivoNotaFiscal = input.files?.[0] ?? null;
+    this.checklist = [];
+  }
+
+  onBoletoFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.arquivoBoleto = input.files?.[0] ?? null;
   }
 
   enviar(): void {
     this.attempted = true;
-    if (!this.selecionada || !this.numeroNotaFiscal.trim() || !this.arquivoNotaFiscal) return;
+    this.checklist = [];
+    if (!this.selecionada || !this.numeroNotaFiscal.trim() || !this.numeroAf.trim() || !this.arquivoNotaFiscal) return;
 
     const formData = new FormData();
     formData.append('numeroNotaFiscal', this.numeroNotaFiscal.trim());
+    formData.append('numeroAf', this.numeroAf.trim());
     formData.append('observacao', this.observacao || '');
     formData.append('arquivoNotaFiscal', this.arquivoNotaFiscal);
 
@@ -64,10 +88,14 @@ export class EnvioNfComponent implements OnInit {
       method: 'PUT',
       headers: { Authorization: `Bearer ${localStorage.getItem('dalba_auth') ? JSON.parse(localStorage.getItem('dalba_auth') as string).token : ''}` },
       body: formData
-    }).then((response) => {
+    }).then(async (response) => {
+      const body = await response.json().catch(() => null);
+      if (body?.checklist) {
+        this.checklist = body.checklist.map((item: any) => ({ titulo: item.titulo, ok: item.ok }));
+      }
       this.enviando = false;
       if (!response.ok) {
-        throw new Error('Falha ao enviar nota fiscal.');
+        return;
       }
       this.load();
     }).catch(() => {
@@ -75,8 +103,36 @@ export class EnvioNfComponent implements OnInit {
     });
   }
 
+  enviarBoleto(): void {
+    this.attemptedBoleto = true;
+    if (!this.boletoSelecionado || !this.arquivoBoleto) return;
+
+    const formData = new FormData();
+    formData.append('observacao', this.observacao || '');
+    formData.append('arquivoBoleto', this.arquivoBoleto);
+
+    this.enviandoBoleto = true;
+    fetch(`${environment.apiUrl}/notas-fiscais/liberacoes/${this.boletoSelecionado.id}/boleto`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${localStorage.getItem('dalba_auth') ? JSON.parse(localStorage.getItem('dalba_auth') as string).token : ''}` },
+      body: formData
+    }).then((response) => {
+      this.enviandoBoleto = false;
+      if (!response.ok) {
+        throw new Error('Falha ao enviar boleto.');
+      }
+      this.load();
+    }).catch(() => {
+      this.enviandoBoleto = false;
+    });
+  }
+
   podeEnviar(item: any): boolean {
     return item.statusFinanceiro === 'AguardandoEnvioNf';
+  }
+
+  podeEnviarBoleto(item: any): boolean {
+    return item.statusFinanceiro === 'AguardandoPagamento';
   }
 
   statusLabel(status: string): string {

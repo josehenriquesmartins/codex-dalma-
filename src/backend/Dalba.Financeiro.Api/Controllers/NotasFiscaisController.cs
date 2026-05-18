@@ -17,7 +17,15 @@ public class NotasFiscaisController : ControllerBase
     [HttpPut("liberacoes/{id:long}/envio")]
     public async Task<IActionResult> EnviarNotaFiscal([FromServices] FinanceiroService service, long id, [FromForm] EnviarNotaFiscalRequest request, CancellationToken ct)
     {
-        await service.EnviarNotaFiscalAsync(id, request, ct);
+        var resultado = await service.EnviarNotaFiscalAsync(id, request, ct);
+        if (!resultado.Sucesso) return BadRequest(resultado);
+        return Ok(resultado);
+    }
+
+    [HttpPut("liberacoes/{id:long}/boleto")]
+    public async Task<IActionResult> EnviarBoleto([FromServices] FinanceiroService service, long id, [FromForm] EnviarBoletoRequest request, CancellationToken ct)
+    {
+        await service.EnviarBoletoAsync(id, request, ct);
         return NoContent();
     }
 }

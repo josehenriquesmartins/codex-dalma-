@@ -259,3 +259,42 @@ button, input, select, textarea { font: inherit; }
   .document-modal-header .actions { justify-content: flex-end; }
   .pdf-viewer { padding: 10px; }
 }
+
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+  .page-shell {
+    padding: 10px;
+  }
+  .toolbar {
+    gap: 10px;
+  }
+  .toolbar h2,
+  .dashboard-header h2 {
+    font-size: 1.65rem;
+  }
+  .card {
+    border-radius: 16px;
+  }
+  .crud-card {
+    padding: 0.9rem;
+  }
+  .form-control,
+  .form-select,
+  .btn {
+    min-height: 44px;
+  }
+  .table-responsive {
+    border-radius: 14px;
+  }
+  .table {
+    min-width: 720px;
+  }
+  .login-card {
+    margin: 0 12px;
+  }
+  .login-brand {
+    align-items: flex-start;
+  }
+}

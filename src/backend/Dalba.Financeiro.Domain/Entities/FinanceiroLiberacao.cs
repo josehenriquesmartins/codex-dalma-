@@ -13,6 +13,7 @@ public class FinanceiroLiberacao : BaseEntity
     public long GeradoPorUsuarioId { get; set; }
     public string? Observacao { get; set; }
     public string? NumeroNotaFiscal { get; set; }
+    public string? NumeroAf { get; set; }
     public string? NomeOriginalNotaFiscal { get; set; }
     public string? NomeArquivoFisicoNotaFiscal { get; set; }
     public string? CaminhoArquivoNotaFiscal { get; set; }
@@ -20,6 +21,12 @@ public class FinanceiroLiberacao : BaseEntity
     public long? TamanhoBytesNotaFiscal { get; set; }
     public DateTime? DataRecebimentoNotaFiscal { get; set; }
     public DateTime? DataHoraUploadNotaFiscal { get; set; }
+    public string? NomeOriginalBoleto { get; set; }
+    public string? NomeArquivoFisicoBoleto { get; set; }
+    public string? CaminhoArquivoBoleto { get; set; }
+    public string? ExtensaoBoleto { get; set; }
+    public long? TamanhoBytesBoleto { get; set; }
+    public DateTime? DataHoraUploadBoleto { get; set; }
 
     public DocumentoEnviado? DocumentoEnviado { get; set; }
     public Fornecedor? Fornecedor { get; set; }

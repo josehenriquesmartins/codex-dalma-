@@ -18,6 +18,30 @@
   color: #5f6f7d;
 }
 
+.dashboard-filter {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #d9e5ee !important;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.filter-copy {
+  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.filter-copy strong {
+  color: #132f4c;
+  font-size: 1.05rem;
+}
+
+.filter-copy span {
+  color: #5f6f7d;
+}
+
 .dashboard-board {
   padding: 1rem;
   border: 1px solid #d9e5ee;
@@ -98,6 +122,13 @@
   font-size: 2.15rem;
   line-height: 1;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.stat-value.text-value {
+  font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
@@ -154,5 +185,9 @@
 
   .stat-value {
     font-size: 1.8rem;
+  }
+
+  .stat-value.text-value {
+    font-size: 1.05rem;
   }
 }
