@@ -8,7 +8,9 @@ public sealed record ConfiguracaoSistemaResponse(
     string? SmsProvider,
     string? SmsConta,
     string? SmsToken,
+    string? SmsSenha,
     string? SmsRemetente,
+    string? SmsEndpoint,
     string? IaApiKey,
     string? WhatsAppApiKey);
 
@@ -20,6 +22,8 @@ public sealed record SalvarConfiguracaoSistemaRequest(
     string? SmsProvider,
     string? SmsConta,
     string? SmsToken,
+    string? SmsSenha,
     string? SmsRemetente,
+    string? SmsEndpoint,
     string? IaApiKey,
     string? WhatsAppApiKey);

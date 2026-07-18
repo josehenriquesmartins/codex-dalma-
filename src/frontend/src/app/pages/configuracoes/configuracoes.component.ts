@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 
 @Component({
@@ -9,19 +9,22 @@ import { ApiService } from '../../core/api.service';
 export class ConfiguracoesComponent implements OnInit {
   carregando = false;
   salvando = false;
+  visibleSecrets = new Set<string>();
 
   form;
 
   constructor(private readonly api: ApiService, private readonly fb: FormBuilder) {
     this.form = this.fb.group({
-      smtpHost: ['', Validators.required],
-      smtpPorta: ['587', Validators.required],
+      smtpHost: [''],
+      smtpPorta: ['587'],
       smtpUsuario: [''],
       smtpSenha: [''],
       smsProvider: [''],
       smsConta: [''],
       smsToken: [''],
+      smsSenha: [''],
       smsRemetente: [''],
+      smsEndpoint: [''],
       iaApiKey: [''],
       whatsAppApiKey: ['']
     });
@@ -45,11 +48,6 @@ export class ConfiguracoesComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
     this.salvando = true;
     this.api.put<any>('/admin/configuracoes', this.form.getRawValue()).subscribe({
       next: (res) => {
@@ -60,5 +58,22 @@ export class ConfiguracoesComponent implements OnInit {
         this.salvando = false;
       }
     });
+  }
+
+  toggleSecret(field: string): void {
+    if (this.visibleSecrets.has(field)) {
+      this.visibleSecrets.delete(field);
+      return;
+    }
+
+    this.visibleSecrets.add(field);
+  }
+
+  secretType(field: string): 'text' | 'password' {
+    return this.visibleSecrets.has(field) ? 'text' : 'password';
+  }
+
+  secretButtonLabel(field: string): string {
+    return this.visibleSecrets.has(field) ? 'Ocultar' : 'Visualizar';
   }
 }

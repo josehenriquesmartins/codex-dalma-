@@ -2,31 +2,64 @@
   <div class="toolbar">
     <div>
       <h2 class="mb-1">Configuração</h2>
-      <p class="section-subtitle">Parâmetros globais de integração e comunicação.</p>
+      <p class="section-subtitle">Parâmetros globais de integração e comunicação. A IA é prevista para apoiar validações futuras de notas fiscais quando a leitura automática tradicional não for suficiente.</p>
     </div>
   </div>
 
   <form class="card crud-card" [formGroup]="form" (ngSubmit)="save()">
     <div class="card-title mb-3">SMTP</div>
     <div class="row g-3">
-      <div class="col-12 col-md-6"><label class="form-label">Host *</label><input class="form-control" formControlName="smtpHost"></div>
-      <div class="col-12 col-md-2"><label class="form-label">Porta *</label><input class="form-control" formControlName="smtpPorta"></div>
+      <div class="col-12 col-md-6"><label class="form-label">Host</label><input class="form-control" formControlName="smtpHost"></div>
+      <div class="col-12 col-md-2"><label class="form-label">Porta</label><input class="form-control" formControlName="smtpPorta"></div>
       <div class="col-12 col-md-4"><label class="form-label">Usuário</label><input class="form-control" formControlName="smtpUsuario"></div>
-      <div class="col-12"><label class="form-label">Senha</label><input class="form-control" type="password" formControlName="smtpSenha"></div>
+      <div class="col-12">
+        <label class="form-label">Senha</label>
+        <div class="input-group">
+          <input class="form-control" [type]="secretType('smtpSenha')" formControlName="smtpSenha" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSecret('smtpSenha')" [attr.aria-label]="secretButtonLabel('smtpSenha') + ' senha SMTP'">&#128065; {{ secretButtonLabel('smtpSenha') }}</button>
+        </div>
+      </div>
     </div>
 
     <div class="card-title mt-4 mb-3">SMS</div>
     <div class="row g-3">
       <div class="col-12 col-md-3"><label class="form-label">Provider</label><input class="form-control" formControlName="smsProvider"></div>
       <div class="col-12 col-md-3"><label class="form-label">Conta</label><input class="form-control" formControlName="smsConta"></div>
-      <div class="col-12 col-md-3"><label class="form-label">Token</label><input class="form-control" formControlName="smsToken"></div>
-      <div class="col-12 col-md-3"><label class="form-label">Remetente</label><input class="form-control" formControlName="smsRemetente"></div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Token</label>
+        <div class="input-group">
+          <input class="form-control" [type]="secretType('smsToken')" formControlName="smsToken" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSecret('smsToken')" [attr.aria-label]="secretButtonLabel('smsToken') + ' token SMS'">&#128065;</button>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Senha</label>
+        <div class="input-group">
+          <input class="form-control" [type]="secretType('smsSenha')" formControlName="smsSenha" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSecret('smsSenha')" [attr.aria-label]="secretButtonLabel('smsSenha') + ' senha SMS'">&#128065;</button>
+        </div>
+      </div>
+      <div class="col-12 col-md-4"><label class="form-label">Remetente</label><input class="form-control" formControlName="smsRemetente"></div>
+      <div class="col-12 col-md-8"><label class="form-label">Endpoint</label><input class="form-control" formControlName="smsEndpoint" placeholder="https://sms.comtele.com.br/api/v2/send"></div>
     </div>
 
     <div class="card-title mt-4 mb-3">APIs</div>
     <div class="row g-3">
-      <div class="col-12 col-md-6"><label class="form-label">API KEY IA</label><input class="form-control" formControlName="iaApiKey"></div>
-      <div class="col-12 col-md-6"><label class="form-label">API KEY WhatsApp</label><input class="form-control" formControlName="whatsAppApiKey"></div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">API KEY IA</label>
+        <div class="input-group">
+          <input class="form-control" [type]="secretType('iaApiKey')" formControlName="iaApiKey" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSecret('iaApiKey')" [attr.aria-label]="secretButtonLabel('iaApiKey') + ' API KEY IA'">&#128065;</button>
+        </div>
+        <div class="form-text">Uso previsto: validação assistida de NF quando PDF/XML não permitir conferência confiável por regra.</div>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">API KEY WhatsApp</label>
+        <div class="input-group">
+          <input class="form-control" [type]="secretType('whatsAppApiKey')" formControlName="whatsAppApiKey" autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSecret('whatsAppApiKey')" [attr.aria-label]="secretButtonLabel('whatsAppApiKey') + ' API KEY WhatsApp'">&#128065;</button>
+        </div>
+      </div>
     </div>
 
     <div class="d-flex gap-2 mt-4">

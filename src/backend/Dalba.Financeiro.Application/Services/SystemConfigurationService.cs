@@ -33,7 +33,9 @@ public class SystemConfigurationService
             Get(parametros, SmsProvider),
             Get(parametros, SmsConta),
             Get(parametros, SmsToken),
+            Get(parametros, SmsSenha),
             Get(parametros, SmsRemetente),
+            Get(parametros, SmsEndpoint),
             Get(parametros, IaApiKey),
             Get(parametros, WhatsAppApiKey));
     }
@@ -47,7 +49,9 @@ public class SystemConfigurationService
         await UpsertAsync(SmsProvider, request.SmsProvider, "Provedor SMS", ct);
         await UpsertAsync(SmsConta, request.SmsConta, "Conta SMS", ct);
         await UpsertAsync(SmsToken, request.SmsToken, "Token SMS", ct);
+        await UpsertAsync(SmsSenha, request.SmsSenha, "Senha SMS", ct);
         await UpsertAsync(SmsRemetente, request.SmsRemetente, "Remetente SMS", ct);
+        await UpsertAsync(SmsEndpoint, request.SmsEndpoint, "Endpoint SMS", ct);
         await UpsertAsync(IaApiKey, request.IaApiKey, "API Key IA", ct);
         await UpsertAsync(WhatsAppApiKey, request.WhatsAppApiKey, "API Key WhatsApp", ct);
 
@@ -87,7 +91,9 @@ public class SystemConfigurationService
     private const string SmsProvider = "CFG_SMS_PROVIDER";
     private const string SmsConta = "CFG_SMS_CONTA";
     private const string SmsToken = "CFG_SMS_TOKEN";
+    private const string SmsSenha = "CFG_SMS_SENHA";
     private const string SmsRemetente = "CFG_SMS_REMETENTE";
+    private const string SmsEndpoint = "CFG_SMS_ENDPOINT";
     private const string IaApiKey = "CFG_IA_API_KEY";
     private const string WhatsAppApiKey = "CFG_WHATSAPP_API_KEY";
 
@@ -100,7 +106,9 @@ public class SystemConfigurationService
         SmsProvider,
         SmsConta,
         SmsToken,
+        SmsSenha,
         SmsRemetente,
+        SmsEndpoint,
         IaApiKey,
         WhatsAppApiKey
     ];

@@ -27,6 +27,7 @@ public static class Seeder
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS extensao_boleto VARCHAR(10) NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS tamanho_bytes_boleto BIGINT NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS data_hora_upload_boleto TIMESTAMP NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS numero_af VARCHAR(60) NULL;");
 
         if (!context.Categorias.Any())
         {

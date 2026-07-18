@@ -4,8 +4,10 @@ using System.Net.Mail;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dalba.Financeiro.Application.Abstractions.Notifications;
+using Dalba.Financeiro.Application.Abstractions.Persistence;
 using Dalba.Financeiro.Domain.Enums;
 using Dalba.Financeiro.Infrastructure.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,13 +17,20 @@ public class SmtpNotificationDispatcher : INotificationDispatcher
 {
     private readonly SmtpSettings _settings;
     private readonly SmsSettings _smsSettings;
+    private readonly IAppDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SmtpNotificationDispatcher> _logger;
 
-    public SmtpNotificationDispatcher(IOptions<SmtpSettings> options, IOptions<SmsSettings> smsOptions, IHttpClientFactory httpClientFactory, ILogger<SmtpNotificationDispatcher> logger)
+    public SmtpNotificationDispatcher(
+        IOptions<SmtpSettings> options,
+        IOptions<SmsSettings> smsOptions,
+        IAppDbContext context,
+        IHttpClientFactory httpClientFactory,
+        ILogger<SmtpNotificationDispatcher> logger)
     {
         _settings = options.Value;
         _smsSettings = smsOptions.Value;
+        _context = context;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -44,24 +53,26 @@ public class SmtpNotificationDispatcher : INotificationDispatcher
 
     private async Task<NotificationDispatchResult> DispatchEmailAsync(string destination, string title, string message, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Server) ||
-            string.IsNullOrWhiteSpace(_settings.User) ||
-            string.IsNullOrWhiteSpace(_settings.Password))
+        var settings = await ResolveSmtpSettingsAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(settings.Server) ||
+            string.IsNullOrWhiteSpace(settings.User) ||
+            string.IsNullOrWhiteSpace(settings.Password))
         {
             return new NotificationDispatchResult(false, Error: "Configuração SMTP incompleta.");
         }
 
         try
         {
-            using var client = new SmtpClient(_settings.Server, _settings.Port)
+            using var client = new SmtpClient(settings.Server, settings.Port)
             {
-                EnableSsl = _settings.Ssl,
-                Credentials = new NetworkCredential(_settings.User, _settings.Password)
+                EnableSsl = settings.Ssl,
+                Credentials = new NetworkCredential(settings.User, settings.Password)
             };
 
             using var mailMessage = new MailMessage
             {
-                From = new MailAddress(_settings.User, _settings.FromName),
+                From = new MailAddress(settings.User, settings.FromName),
                 Subject = title,
                 Body = message,
                 IsBodyHtml = false
@@ -80,13 +91,15 @@ public class SmtpNotificationDispatcher : INotificationDispatcher
 
     private async Task<NotificationDispatchResult> DispatchSmsAsync(string destination, string message, CancellationToken cancellationToken)
     {
-        if (!string.Equals(_smsSettings.Provider, "COMTELE", StringComparison.OrdinalIgnoreCase))
+        var settings = await ResolveSmsSettingsAsync(cancellationToken);
+
+        if (!string.Equals(settings.Provider, "COMTELE", StringComparison.OrdinalIgnoreCase))
         {
             return new NotificationDispatchResult(false, Error: "Provedor SMS não configurado.");
         }
 
-        var authKey = string.IsNullOrWhiteSpace(_smsSettings.Token) ? _smsSettings.Account : _smsSettings.Token;
-        if (string.IsNullOrWhiteSpace(authKey) || string.IsNullOrWhiteSpace(_smsSettings.Endpoint))
+        var authKey = string.IsNullOrWhiteSpace(settings.Token) ? settings.Account : settings.Token;
+        if (string.IsNullOrWhiteSpace(authKey) || string.IsNullOrWhiteSpace(settings.Endpoint))
         {
             return new NotificationDispatchResult(false, Error: "Configuração SMS incompleta.");
         }
@@ -100,11 +113,11 @@ public class SmtpNotificationDispatcher : INotificationDispatcher
         try
         {
             var client = _httpClientFactory.CreateClient();
-            using var request = new HttpRequestMessage(HttpMethod.Post, _smsSettings.Endpoint);
+            using var request = new HttpRequestMessage(HttpMethod.Post, settings.Endpoint);
             request.Headers.TryAddWithoutValidation("auth-key", authKey);
             request.Content = JsonContent.Create(new
             {
-                Sender = _smsSettings.Sender,
+                Sender = settings.Sender,
                 Receivers = phone,
                 Content = message
             });
@@ -134,7 +147,91 @@ public class SmtpNotificationDispatcher : INotificationDispatcher
         return digits.StartsWith("55") && digits.Length > 11 ? digits[2..] : digits;
     }
 
+    private async Task<SmtpSettings> ResolveSmtpSettingsAsync(CancellationToken cancellationToken)
+    {
+        var parametros = await LoadParametrosAsync(SmtpKeys, cancellationToken);
+
+        return new SmtpSettings
+        {
+            Server = FirstValue(parametros, CfgSmtpHost) ?? _settings.Server,
+            Port = ParseInt(FirstValue(parametros, CfgSmtpPorta), _settings.Port),
+            Ssl = _settings.Ssl,
+            User = FirstValue(parametros, CfgSmtpUsuario) ?? _settings.User,
+            Password = FirstValue(parametros, CfgSmtpSenha) ?? _settings.Password,
+            FromName = _settings.FromName
+        };
+    }
+
+    private async Task<SmsSettings> ResolveSmsSettingsAsync(CancellationToken cancellationToken)
+    {
+        var parametros = await LoadParametrosAsync(SmsKeys, cancellationToken);
+
+        return new SmsSettings
+        {
+            Provider = FirstValue(parametros, CfgSmsProvider) ?? _smsSettings.Provider,
+            Account = FirstValue(parametros, CfgSmsConta) ?? _smsSettings.Account,
+            Token = FirstValue(parametros, CfgSmsToken) ?? _smsSettings.Token,
+            Password = FirstValue(parametros, CfgSmsSenha) ?? _smsSettings.Password,
+            Sender = FirstValue(parametros, CfgSmsRemetente) ?? _smsSettings.Sender,
+            Endpoint = FirstValue(parametros, CfgSmsEndpoint) ?? _smsSettings.Endpoint
+        };
+    }
+
+    private async Task<Dictionary<string, string>> LoadParametrosAsync(IEnumerable<string> keys, CancellationToken cancellationToken)
+    {
+        var keyList = keys.ToArray();
+        return await _context.ParametrosSistema
+            .AsNoTracking()
+            .Where(x => x.Ativo && keyList.Contains(x.Chave))
+            .ToDictionaryAsync(x => x.Chave, x => x.Valor, cancellationToken);
+    }
+
+    private static string? FirstValue(IReadOnlyDictionary<string, string> parametros, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (parametros.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static int ParseInt(string? value, int fallback) =>
+        int.TryParse(value, out var parsed) && parsed > 0 ? parsed : fallback;
+
     private sealed record ComteleResponse(
         [property: JsonPropertyName("Success")] bool Success,
         [property: JsonPropertyName("Message")] string? Message);
+
+    private const string CfgSmtpHost = "CFG_SMTP_HOST";
+    private const string CfgSmtpPorta = "CFG_SMTP_PORTA";
+    private const string CfgSmtpUsuario = "CFG_SMTP_USUARIO";
+    private const string CfgSmtpSenha = "CFG_SMTP_SENHA";
+    private const string CfgSmsProvider = "CFG_SMS_PROVIDER";
+    private const string CfgSmsConta = "CFG_SMS_CONTA";
+    private const string CfgSmsToken = "CFG_SMS_TOKEN";
+    private const string CfgSmsRemetente = "CFG_SMS_REMETENTE";
+    private const string CfgSmsSenha = "CFG_SMS_SENHA";
+    private const string CfgSmsEndpoint = "CFG_SMS_ENDPOINT";
+
+    private static readonly string[] SmtpKeys =
+    [
+        CfgSmtpHost,
+        CfgSmtpPorta,
+        CfgSmtpUsuario,
+        CfgSmtpSenha
+    ];
+
+    private static readonly string[] SmsKeys =
+    [
+        CfgSmsProvider,
+        CfgSmsConta,
+        CfgSmsToken,
+        CfgSmsRemetente,
+        CfgSmsSenha,
+        CfgSmsEndpoint
+    ];
 }

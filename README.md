@@ -9,6 +9,15 @@ Solução full-stack para gestão de documentos, conformidade e custos de pagame
 - `src/backend`: API em Clean Architecture.
 - `src/frontend`: aplicação Angular responsiva.
 - `docker-compose.yml`: orquestra PostgreSQL, API e frontend.
+- `.env.example`: modelo das variáveis de ambiente. O `.env` real não deve ser versionado.
+
+## Documentação
+
+- `docs/deploy.md`: execução local, Docker, variáveis e publicação.
+- `docs/arquitetura.md`: camadas, projetos e integrações.
+- `docs/sistema.md`: perfis, fluxo e regras principais.
+- `docs/banco-de-dados.md`: tabelas, sequences, scripts e backup.
+- `docs/telas-funcionalidades.md`: telas e funcionalidades por perfil.
 
 ## Credenciais seed
 
