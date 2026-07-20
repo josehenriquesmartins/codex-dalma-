@@ -21,8 +21,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Docker / local runtime data
-storage/
-uploads/
+# Ancorado ao caminho de runtime da API — NAO use "storage/"/"uploads/" soltos:
+# com core.ignorecase=true (Windows) eles ignoram pastas de codigo como Abstractions/Storage.
+/src/backend/Dalba.Financeiro.Api/storage/
 postgres-data/
 logs/
 
