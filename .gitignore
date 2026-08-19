@@ -41,3 +41,7 @@ Desktop.ini
 
 # Local archives
 *.zip
+dist/
+
+# Working outputs (dados gerados, nao versionar)
+outputs/
