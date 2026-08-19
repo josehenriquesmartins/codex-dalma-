@@ -8,6 +8,8 @@ import { ApiService } from '../../core/api.service';
 })
 export class DocumentosCatalogoComponent implements OnInit {
   tipos: any[] = [];
+  pagina = 1;
+  tamanho = 10;
   tipoForm;
   editingTipoId: number | null = null;
 

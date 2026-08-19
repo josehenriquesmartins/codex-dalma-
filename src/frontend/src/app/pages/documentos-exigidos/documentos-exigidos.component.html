@@ -14,7 +14,7 @@
             <tr><th>Documento</th><th>Categoria</th><th>Tipo Pessoa</th><th>Porte</th><th>Obrigatório</th><th class="text-end">Ações</th></tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of exigidos">
+            <tr *ngFor="let item of exigidos | slice:(pagina-1)*tamanho:pagina*tamanho">
               <td>{{ item.documentoNome }}</td>
               <td>{{ item.categoriaDescricao }}</td>
               <td>{{ item.tipoPessoa }}</td>
@@ -30,6 +30,7 @@
           </tbody>
         </table>
       </div>
+      <app-paginacao [total]="exigidos.length" [pagina]="pagina" [tamanho]="tamanho" (paginaChange)="pagina = $event" (tamanhoChange)="tamanho = $event; pagina = 1"></app-paginacao>
     </div>
 
     <form class="card crud-card" [formGroup]="exigidoForm" (ngSubmit)="save()">

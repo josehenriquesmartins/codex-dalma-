@@ -26,8 +26,9 @@
     <div class="card crud-card">
       <div class="card-title">Lista de fornecedores</div>
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0"><thead><tr><th>Código</th><th>Nome</th><th>Documento</th><th>Cidade</th><th>Status</th><th class="text-end">Ações</th></tr></thead><tbody><tr *ngFor="let item of fornecedores"><td>{{item.codigoFornecedor}}</td><td>{{item.nomeOuRazaoSocial}}</td><td>{{item.cpfOuCnpj}}</td><td>{{item.cidade}}/{{item.estado}}</td><td><span class="status-pill" [class.pending]="!item.ativo">{{item.ativo ? 'Ativo' : 'Inativo'}}</span></td><td class="text-end"><div class="actions justify-content-end"><button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">Editar</button><button type="button" class="btn btn-danger btn-sm" (click)="remove(item)">Excluir</button></div></td></tr></tbody></table>
+        <table class="table table-hover align-middle mb-0"><thead><tr><th>Código</th><th>Nome</th><th>Documento</th><th>Cidade</th><th>Status</th><th class="text-end">Ações</th></tr></thead><tbody><tr *ngFor="let item of fornecedores | slice:(pagina-1)*tamanho:pagina*tamanho"><td>{{item.codigoFornecedor}}</td><td>{{item.nomeOuRazaoSocial}}</td><td>{{item.cpfOuCnpj}}</td><td>{{item.cidade}}/{{item.estado}}</td><td><span class="status-pill" [class.pending]="!item.ativo">{{item.ativo ? 'Ativo' : 'Inativo'}}</span></td><td class="text-end"><div class="actions justify-content-end"><button type="button" class="btn btn-outline-primary btn-sm" (click)="edit(item)">Editar</button><button type="button" class="btn btn-danger btn-sm" (click)="remove(item)">Excluir</button></div></td></tr></tbody></table>
       </div>
+      <app-paginacao [total]="fornecedores.length" [pagina]="pagina" [tamanho]="tamanho" (paginaChange)="pagina = $event" (tamanhoChange)="tamanho = $event; pagina = 1"></app-paginacao>
     </div>
     <form class="card crud-card" [formGroup]="form" (ngSubmit)="save()">
       <div class="card-title">{{ editingId ? 'Alterar fornecedor' : 'Incluir fornecedor' }}</div>

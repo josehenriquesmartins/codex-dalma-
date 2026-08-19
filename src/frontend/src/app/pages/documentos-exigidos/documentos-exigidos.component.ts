@@ -8,6 +8,8 @@ import { ApiService } from '../../core/api.service';
 })
 export class DocumentosExigidosComponent implements OnInit {
   exigidos: any[] = [];
+  pagina = 1;
+  tamanho = 10;
   tipos: any[] = [];
   categorias: any[] = [];
   exigidoForm;

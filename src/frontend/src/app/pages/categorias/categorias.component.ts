@@ -8,6 +8,8 @@ import { ApiService } from '../../core/api.service';
 })
 export class CategoriasComponent implements OnInit {
   categorias: any[] = [];
+  pagina = 1;
+  tamanho = 10;
   form;
   editingId: number | null = null;
 

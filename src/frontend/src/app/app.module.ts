@@ -23,6 +23,7 @@ import { NotificacoesComponent } from './pages/notificacoes/notificacoes.compone
 import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 import { ApiErrorInterceptor } from './core/api-error.interceptor';
 import { JwtInterceptor } from './core/jwt.interceptor';
+import { PaginacaoComponent } from './shared/paginacao.component';
 
 @NgModule({
   declarations: [
@@ -42,7 +43,8 @@ import { JwtInterceptor } from './core/jwt.interceptor';
     FinanceiroComponent,
     EnvioNfComponent,
     NotificacoesComponent,
-    ResetPasswordComponent
+    ResetPasswordComponent,
+    PaginacaoComponent
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule, AppRoutingModule],
   providers: [

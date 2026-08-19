@@ -10,6 +10,8 @@ import { environment } from '../../environments/environment';
 export class FornecedoresComponent implements OnInit {
   fornecedores: any[] = [];
   categorias: any[] = [];
+  pagina = 1;
+  tamanho = 10;
   form;
   editingId: number | null = null;
   arquivoImportacao: File | null = null;

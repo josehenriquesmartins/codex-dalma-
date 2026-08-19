@@ -10,6 +10,8 @@ import { AuthService } from '../../core/auth.service';
 export class ContratosComponent implements OnInit {
   contratos: any[] = [];
   fornecedores: any[] = [];
+  pagina = 1;
+  tamanho = 10;
   form;
   editingId: number | null = null;
 
