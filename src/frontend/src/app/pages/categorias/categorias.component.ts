@@ -10,6 +10,8 @@ export class CategoriasComponent implements OnInit {
   categorias: any[] = [];
   pagina = 1;
   tamanho = 10;
+  filtro = '';
+  modalAberto = false;
   form;
   editingId: number | null = null;
 
@@ -28,10 +30,11 @@ export class CategoriasComponent implements OnInit {
     const action = this.editingId ? this.api.put(`/categorias/${this.editingId}`, this.form.getRawValue()) : this.api.post('/categorias', this.form.getRawValue());
     action.subscribe(() => { this.cancelEdit(); this.load(); });
   }
-  edit(item: any): void { this.editingId = item.id; this.form.patchValue(item); }
+  abrirNovo(): void { this.cancelEdit(); this.modalAberto = true; }
+  edit(item: any): void { this.editingId = item.id; this.form.patchValue(item); this.modalAberto = true; }
   remove(item: any): void {
     if (!confirm(`Excluir categoria ${item.codigo}?`)) return;
     this.api.delete(`/categorias/${item.id}`).subscribe(() => this.load());
   }
-  cancelEdit(): void { this.editingId = null; this.form.reset({ ativo: true }); }
+  cancelEdit(): void { this.editingId = null; this.modalAberto = false; this.form.reset({ ativo: true }); }
 }

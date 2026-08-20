@@ -4,17 +4,21 @@
       <h2 class="mb-1">Documentos Exigidos</h2>
       <p class="section-subtitle">Regras por tipo de pessoa, porte e categoria para composição documental.</p>
     </div>
+    <button class="btn btn-primary" type="button" (click)="abrirNovo()">Nova regra</button>
   </div>
   <div class="crud-stack">
     <div class="card crud-card">
       <div class="card-title">Lista de regras</div>
+      <div class="mb-3">
+        <input class="form-control" type="search" placeholder="Pesquisar..." [(ngModel)]="filtro" (ngModelChange)="pagina = 1">
+      </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead>
             <tr><th>Documento</th><th>Categoria</th><th>Tipo Pessoa</th><th>Porte</th><th>Obrigatório</th><th class="text-end">Ações</th></tr>
           </thead>
           <tbody>
-            <tr *ngFor="let item of exigidos | slice:(pagina-1)*tamanho:pagina*tamanho">
+            <tr *ngFor="let item of exigidos | filtroTexto:filtro | slice:(pagina-1)*tamanho:pagina*tamanho">
               <td>{{ item.documentoNome }}</td>
               <td>{{ item.categoriaDescricao }}</td>
               <td>{{ item.tipoPessoa }}</td>
@@ -30,11 +34,18 @@
           </tbody>
         </table>
       </div>
-      <app-paginacao [total]="exigidos.length" [pagina]="pagina" [tamanho]="tamanho" (paginaChange)="pagina = $event" (tamanhoChange)="tamanho = $event; pagina = 1"></app-paginacao>
+      <app-paginacao [total]="(exigidos | filtroTexto:filtro).length" [pagina]="pagina" [tamanho]="tamanho" (paginaChange)="pagina = $event" (tamanhoChange)="tamanho = $event; pagina = 1"></app-paginacao>
     </div>
 
-    <form class="card crud-card" [formGroup]="exigidoForm" (ngSubmit)="save()">
-      <div class="card-title">{{ editingExigidoId ? 'Alterar regra de documento exigido' : 'Incluir regra de documento exigido' }}</div>
+  </div>
+
+  <div class="crud-modal-backdrop" *ngIf="modalAberto">
+    <div class="crud-modal" (click)="$event.stopPropagation()">
+      <div class="crud-modal-header">
+        <div class="card-title">{{ editingExigidoId ? 'Alterar regra de documento exigido' : 'Incluir regra de documento exigido' }}</div>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="cancelEdit()">✕</button>
+      </div>
+      <form [formGroup]="exigidoForm" (ngSubmit)="save()">
       <div class="row g-3">
         <div class="col-12 col-md-4"><label class="form-label required">Documento</label><select class="form-select" formControlName="documentoTipoId"><option *ngFor="let item of tipos" [ngValue]="item.id">{{ item.nomeDocumento }}</option></select><div class="field-error" *ngIf="exigidoForm.get('documentoTipoId')?.touched && exigidoForm.get('documentoTipoId')?.hasError('required')">Selecione o documento.</div></div>
         <div class="col-12 col-md-3"><label class="form-label required">Tipo Pessoa</label><select class="form-select" formControlName="tipoPessoa"><option>Fisica</option><option>Juridica</option></select><div class="field-error" *ngIf="exigidoForm.get('tipoPessoa')?.touched && exigidoForm.get('tipoPessoa')?.hasError('required')">Selecione o tipo.</div></div>
@@ -43,9 +54,10 @@
         <div class="col-12 col-md-3"><label class="form-label">Obrigatório</label><select class="form-select" formControlName="obrigatorio"><option [ngValue]="true">Sim</option><option [ngValue]="false">Não</option></select></div>
         <div class="col-12 d-flex gap-2 flex-wrap">
           <button class="btn btn-primary" [disabled]="exigidoForm.invalid">{{ editingExigidoId ? 'Atualizar regra' : 'Salvar regra' }}</button>
-          <button type="button" class="btn btn-outline-secondary" *ngIf="editingExigidoId" (click)="cancelEdit()">Cancelar</button>
+          <button type="button" class="btn btn-outline-secondary" (click)="cancelEdit()">Cancelar</button>
         </div>
       </div>
-    </form>
+      </form>
+    </div>
   </div>
 </section>

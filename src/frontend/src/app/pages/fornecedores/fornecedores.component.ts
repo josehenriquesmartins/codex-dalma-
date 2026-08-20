@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { environment } from '../../environments/environment';
+import { documentoValidator } from '../../shared/documento.util';
+import { emailValidator } from '../../shared/email.util';
 
 @Component({
   selector: 'app-fornecedores',
@@ -12,6 +14,8 @@ export class FornecedoresComponent implements OnInit {
   categorias: any[] = [];
   pagina = 1;
   tamanho = 10;
+  filtro = '';
+  modalAberto = false;
   form;
   editingId: number | null = null;
   arquivoImportacao: File | null = null;
@@ -26,19 +30,19 @@ export class FornecedoresComponent implements OnInit {
       categoriaId: [1, Validators.required],
       nomeOuRazaoSocial: ['', Validators.required],
       nomeFantasia: [''],
-      cpfOuCnpj: ['', Validators.required],
-      ddiTelefone: ['+55', Validators.required],
-      dddTelefone: ['11', Validators.required],
-      numeroTelefone: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      cep: ['', Validators.required],
-      logradouro: ['', Validators.required],
-      numero: ['', Validators.required],
+      cpfOuCnpj: ['', [Validators.required, documentoValidator]],
+      ddiTelefone: ['+55'],
+      dddTelefone: [''],
+      numeroTelefone: [''],
+      email: ['', [emailValidator]],
+      cep: [''],
+      logradouro: [''],
+      numero: [''],
       complemento: [''],
-      bairro: ['', Validators.required],
-      cidade: ['', Validators.required],
-      estado: ['SP', Validators.required],
-      pais: ['Brasil', Validators.required],
+      bairro: [''],
+      cidade: [''],
+      estado: [''],
+      pais: ['Brasil'],
       ativo: [true]
     });
 
@@ -63,10 +67,16 @@ export class FornecedoresComponent implements OnInit {
     action.subscribe(() => { this.cancelEdit(); this.load(); });
   }
 
+  abrirNovo(): void {
+    this.cancelEdit();
+    this.modalAberto = true;
+  }
+
   edit(item: any): void {
     this.editingId = item.id;
     this.form.patchValue(item);
     this.applyTipoPessoaRules(item.tipoPessoa);
+    this.modalAberto = true;
   }
 
   remove(item: any): void {
@@ -100,6 +110,7 @@ export class FornecedoresComponent implements OnInit {
 
   cancelEdit(): void {
     this.editingId = null;
+    this.modalAberto = false;
     this.form.reset({ tipoPessoa: 'Juridica', porteEmpresa: 'Microempresa', categoriaId: 1, ddiTelefone: '+55', dddTelefone: '11', estado: 'SP', pais: 'Brasil', ativo: true });
     this.applyTipoPessoaRules('Juridica');
   }
@@ -117,6 +128,7 @@ export class FornecedoresComponent implements OnInit {
   }
 
   private applyTipoPessoaRules(tipoPessoa: string | null): void {
+    this.form.get('cpfOuCnpj')?.updateValueAndValidity({ emitEvent: false });
     const porteControl = this.form.get('porteEmpresa');
     if (!porteControl) return;
 

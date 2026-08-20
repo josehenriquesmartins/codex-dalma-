@@ -10,6 +10,8 @@ export class DocumentosCatalogoComponent implements OnInit {
   tipos: any[] = [];
   pagina = 1;
   tamanho = 10;
+  filtro = '';
+  modalAberto = false;
   tipoForm;
   editingTipoId: number | null = null;
 
@@ -46,9 +48,15 @@ export class DocumentosCatalogoComponent implements OnInit {
     });
   }
 
+  abrirNovo(): void {
+    this.cancelEdit();
+    this.modalAberto = true;
+  }
+
   edit(item: any): void {
     this.editingTipoId = item.id;
     this.tipoForm.patchValue(item);
+    this.modalAberto = true;
   }
 
   remove(item: any): void {
@@ -58,6 +66,7 @@ export class DocumentosCatalogoComponent implements OnInit {
 
   cancelEdit(): void {
     this.editingTipoId = null;
+    this.modalAberto = false;
     this.tipoForm.reset({ ativo: true });
   }
 }

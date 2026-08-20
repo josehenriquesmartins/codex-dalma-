@@ -1,4 +1,5 @@
 using Dalba.Financeiro.Application.Abstractions.Audit;
+using Dalba.Financeiro.Application.Abstractions.Ia;
 using Dalba.Financeiro.Application.Abstractions.Notifications;
 using Dalba.Financeiro.Application.Abstractions.Persistence;
 using Dalba.Financeiro.Application.Abstractions.Security;
@@ -441,14 +442,16 @@ public class AdminValidationService
     private readonly NotificationService _notificationService;
     private readonly IAuditService _auditService;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IIaDocumentAnalyzer _iaAnalyzer;
 
-    public AdminValidationService(IAppDbContext context, ICurrentUserService currentUser, NotificationService notificationService, IAuditService auditService, IFileStorageService fileStorageService)
+    public AdminValidationService(IAppDbContext context, ICurrentUserService currentUser, NotificationService notificationService, IAuditService auditService, IFileStorageService fileStorageService, IIaDocumentAnalyzer iaAnalyzer)
     {
         _context = context;
         _currentUser = currentUser;
         _notificationService = notificationService;
         _auditService = auditService;
         _fileStorageService = fileStorageService;
+        _iaAnalyzer = iaAnalyzer;
     }
 
     public async Task<IReadOnlyCollection<EnvioParaValidacaoDto>> ListPendentesAsync(short mesReferencia, short anoReferencia, CancellationToken ct)
@@ -522,7 +525,11 @@ public class AdminValidationService
                 x.StatusValidacaoDocumento,
                 x.ObservacaoAvaliacao,
                 x.AvaliadoPorUsuarioId,
-                x.DataHoraAvaliacao))
+                x.DataHoraAvaliacao,
+                x.IaSugestao,
+                x.IaJustificativa,
+                x.IaProvider,
+                x.IaAnalisadoEm))
             .ToList();
 
         return new EnvioValidacaoDetalheDto(
@@ -534,6 +541,93 @@ public class AdminValidationService
             envio.Status,
             envio.DataHoraRegistro,
             documentos);
+    }
+
+    public async Task<AnaliseIaResponse> AnalisarDocumentoIaAsync(long documentoRegistradoId, CancellationToken ct)
+    {
+        var apiKey = (await _context.ParametrosSistema.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Chave == "CFG_IA_API_KEY" && x.Ativo, ct))?.Valor;
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new AppException("A conferência por IA não está habilitada. Cadastre a API Key de IA em Configurações.", 400);
+        }
+
+        var documento = await _context.DocumentosRegistrados
+            .Include(x => x.DocumentoTipo)
+            .Include(x => x.DocumentoEnviado)
+            .ThenInclude(x => x!.Fornecedor)
+            .FirstOrDefaultAsync(x => x.Id == documentoRegistradoId, ct)
+            ?? throw new AppException("Documento não encontrado.", 404);
+
+        var envio = documento.DocumentoEnviado!;
+        var fornecedor = envio.Fornecedor!;
+
+        var stream = await _fileStorageService.OpenReadAsync(documento.CaminhoArquivo, ct)
+            ?? throw new AppException("Arquivo não encontrado no armazenamento.", 404);
+
+        IaEntradaDocumento entrada;
+        await using (stream)
+        {
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory, ct);
+            var bytes = memory.ToArray();
+            var extensao = documento.Extensao.ToLowerInvariant();
+            if (extensao == ".pdf")
+            {
+                entrada = new IaEntradaDocumento(ExtrairTextoPdf(bytes), null, null);
+            }
+            else
+            {
+                var mediaType = extensao switch
+                {
+                    ".png" => "image/png",
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    _ => "application/octet-stream"
+                };
+                entrada = new IaEntradaDocumento(null, Convert.ToBase64String(bytes), mediaType);
+            }
+        }
+
+        var contexto = new IaDocumentoContexto(
+            documento.DocumentoTipo!.NomeDocumento,
+            fornecedor.NomeOuRazaoSocial,
+            fornecedor.CpfOuCnpj,
+            envio.MesReferencia,
+            envio.AnoReferencia);
+
+        IaAnaliseResultado resultado;
+        try
+        {
+            resultado = await _iaAnalyzer.AnalisarAsync(entrada, contexto, apiKey, ct);
+        }
+        catch (Exception ex)
+        {
+            throw new AppException($"Não foi possível concluir a análise por IA. {ex.Message}", 502);
+        }
+
+        documento.IaSugestao = resultado.Sugestao;
+        documento.IaJustificativa = resultado.Justificativa;
+        documento.IaProvider = resultado.Provider;
+        documento.IaAnalisadoEm = DbClock.Now;
+        await _context.SaveChangesAsync(ct);
+        await _auditService.RegistrarAsync("documentos_registrados", documento.Id, AcaoAuditoria.Validacao, $"Conferência por IA ({resultado.Provider}): sugestão {resultado.Sugestao}.", ct);
+
+        return new AnaliseIaResponse(
+            documento.Id,
+            resultado.Sugestao,
+            resultado.TipoConfere,
+            resultado.VigenciaOk,
+            resultado.DadosConferem,
+            resultado.Justificativa,
+            resultado.Provider,
+            documento.IaAnalisadoEm.Value);
+    }
+
+    private static string ExtrairTextoPdf(byte[] bytes)
+    {
+        using var pdf = PdfDocument.Open(bytes);
+        var texto = string.Join(" ", pdf.GetPages().Select(x => x.Text));
+        return texto.Length > 12000 ? texto[..12000] : texto;
     }
 
     public async Task<DocumentoVisualizacaoDto> VisualizarDocumentoAsync(long documentoRegistradoId, CancellationToken ct)

@@ -17,6 +17,7 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
   };
 
   envios: any[] = [];
+  buscaEnvios = '';
   envioSelecionado: any | null = null;
   documentoVisualizado: any | null = null;
   visualizadorUrl: SafeResourceUrl | null = null;
@@ -29,6 +30,7 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
   carregandoDetalhe = false;
   processandoDocumentoId: number | null = null;
   acaoProcessando: string | null = null;
+  analisandoIaId: number | null = null;
   filtroTocado = false;
 
   constructor(private readonly api: ApiService, private readonly sanitizer: DomSanitizer) {}
@@ -133,6 +135,36 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
         this.finalizarProcessamentoValidacao();
       }
     });
+  }
+
+  analisarIa(documento: any): void {
+    this.analisandoIaId = documento.id;
+    this.api.post<any>(`/admin/documentos-registrados/${documento.id}/analise-ia`, {}).subscribe({
+      next: (res) => {
+        documento.iaSugestao = res.sugestao;
+        documento.iaJustificativa = res.justificativa;
+        documento.iaProvider = res.provider;
+        documento.iaAnalisadoEm = res.analisadoEm;
+        documento.iaTipoConfere = res.tipoConfere;
+        documento.iaVigenciaOk = res.vigenciaOk;
+        documento.iaDadosConferem = res.dadosConferem;
+        this.analisandoIaId = null;
+      },
+      error: () => {
+        this.analisandoIaId = null;
+      }
+    });
+  }
+
+  iaSugestaoClasse(sugestao: string | null | undefined): string {
+    switch (sugestao) {
+      case 'Aprovar':
+        return 'status-pill';
+      case 'Reprovar':
+        return 'status-pill rejected';
+      default:
+        return 'status-pill pending';
+    }
   }
 
   visualizarDocumento(documento: any): void {

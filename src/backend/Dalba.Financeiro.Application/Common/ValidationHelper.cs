@@ -6,7 +6,15 @@ public static class ValidationHelper
 {
     public static string SomenteDigitos(string? value) => Regex.Replace(value ?? string.Empty, "[^0-9]", string.Empty);
 
-    public static bool IsValidEmail(string email) => Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    /// <summary>
+    /// Normaliza CPF/CNPJ removendo pontuação e mantendo alfanuméricos em maiúsculo.
+    /// CPF continua só com dígitos; CNPJ preserva letras (novo padrão alfanumérico).
+    /// </summary>
+    public static string NormalizarDocumento(string? value) =>
+        Regex.Replace(value ?? string.Empty, "[^0-9A-Za-z]", string.Empty).ToUpperInvariant();
+
+    public static bool IsValidEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) && Regex.IsMatch(email.Trim(), @"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$");
 
     public static bool IsValidCpf(string cpf)
     {
@@ -17,8 +25,15 @@ public static class ValidationHelper
 
     public static bool IsValidCnpj(string cnpj)
     {
-        cnpj = SomenteDigitos(cnpj);
+        cnpj = NormalizarDocumento(cnpj);
         if (cnpj.Length != 14 || cnpj.Distinct().Count() == 1) return false;
+        // 12 primeiros: alfanuméricos (0-9, A-Z); 2 últimos: dígitos verificadores numéricos.
+        for (var i = 0; i < 12; i++)
+        {
+            var c = cnpj[i];
+            if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'))) return false;
+        }
+        if (!char.IsDigit(cnpj[12]) || !char.IsDigit(cnpj[13])) return false;
         return CheckCnpjDigit(cnpj, 12) == cnpj[12] - '0' && CheckCnpjDigit(cnpj, 13) == cnpj[13] - '0';
     }
 

@@ -182,6 +182,10 @@ public class DocumentoRegistradoConfiguration : IEntityTypeConfiguration<Documen
         builder.Property(x => x.AvaliadoPorUsuarioId).HasColumnName("avaliado_por_usuario_id");
         builder.Property(x => x.DataHoraAvaliacao).HasColumnName("data_hora_avaliacao").HasColumnType("timestamp");
         builder.Property(x => x.ObservacaoAvaliacao).HasColumnName("observacao_avaliacao").HasMaxLength(500);
+        builder.Property(x => x.IaSugestao).HasColumnName("ia_sugestao").HasMaxLength(20);
+        builder.Property(x => x.IaJustificativa).HasColumnName("ia_justificativa").HasMaxLength(2000);
+        builder.Property(x => x.IaProvider).HasColumnName("ia_provider").HasMaxLength(60);
+        builder.Property(x => x.IaAnalisadoEm).HasColumnName("ia_analisado_em").HasColumnType("timestamp");
         builder.HasIndex(x => new { x.DocumentoEnviadoId, x.DocumentoTipoId }).IsUnique();
         builder.HasOne(x => x.DocumentoEnviado).WithMany(x => x.DocumentosRegistrados).HasForeignKey(x => x.DocumentoEnviadoId);
         builder.HasOne(x => x.DocumentoTipo).WithMany(x => x.DocumentosRegistrados).HasForeignKey(x => x.DocumentoTipoId);

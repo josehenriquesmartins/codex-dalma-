@@ -1,5 +1,6 @@
 using System.Text;
 using Dalba.Financeiro.Application.Abstractions.Audit;
+using Dalba.Financeiro.Application.Abstractions.Ia;
 using Dalba.Financeiro.Application.Abstractions.Integrations;
 using Dalba.Financeiro.Application.Abstractions.Notifications;
 using Dalba.Financeiro.Application.Abstractions.Persistence;
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
         services.Configure<SmsSettings>(configuration.GetSection(SmsSettings.SectionName));
         services.Configure<ProtheusSettings>(configuration.GetSection("Protheus"));
+        services.Configure<OpenAiSettings>(configuration.GetSection(OpenAiSettings.SectionName));
         services.PostConfigure<SmsSettings>(settings =>
         {
             settings.Provider = configuration["SMS_PROVIDER"] ?? settings.Provider;
@@ -47,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IProtheusIntegrationService, MockProtheusIntegrationService>();
+        services.AddScoped<IIaDocumentAnalyzer, OpenAiDocumentAnalyzer>();
         services.AddScoped<INotificationDispatcher, SmtpNotificationDispatcher>();
         services.AddScoped<IAuditService, AuditService>();
 

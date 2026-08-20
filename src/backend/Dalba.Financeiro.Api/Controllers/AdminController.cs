@@ -32,6 +32,10 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("documentos-registrados/{documentoRegistradoId:long}/analise-ia")]
+    public async Task<IActionResult> AnalisarIa([FromServices] AdminValidationService service, long documentoRegistradoId, CancellationToken ct) =>
+        Ok(await service.AnalisarDocumentoIaAsync(documentoRegistradoId, ct));
+
     [HttpGet("configuracoes")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> GetConfiguracoes([FromServices] SystemConfigurationService service, CancellationToken ct) =>

@@ -24,6 +24,7 @@ import { ResetPasswordComponent } from './pages/reset-password/reset-password.co
 import { ApiErrorInterceptor } from './core/api-error.interceptor';
 import { JwtInterceptor } from './core/jwt.interceptor';
 import { PaginacaoComponent } from './shared/paginacao.component';
+import { FiltroTextoPipe } from './shared/filtro-texto.pipe';
 
 @NgModule({
   declarations: [
@@ -44,7 +45,8 @@ import { PaginacaoComponent } from './shared/paginacao.component';
     EnvioNfComponent,
     NotificacoesComponent,
     ResetPasswordComponent,
-    PaginacaoComponent
+    PaginacaoComponent,
+    FiltroTextoPipe
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule, AppRoutingModule],
   providers: [

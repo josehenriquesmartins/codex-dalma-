@@ -10,6 +10,8 @@ export class DocumentosExigidosComponent implements OnInit {
   exigidos: any[] = [];
   pagina = 1;
   tamanho = 10;
+  filtro = '';
+  modalAberto = false;
   tipos: any[] = [];
   categorias: any[] = [];
   exigidoForm;
@@ -54,10 +56,16 @@ export class DocumentosExigidosComponent implements OnInit {
     });
   }
 
+  abrirNovo(): void {
+    this.cancelEdit();
+    this.modalAberto = true;
+  }
+
   edit(item: any): void {
     this.editingExigidoId = item.id;
     this.exigidoForm.patchValue(item);
     this.applyTipoPessoaRules(item.tipoPessoa);
+    this.modalAberto = true;
   }
 
   remove(item: any): void {
@@ -67,6 +75,7 @@ export class DocumentosExigidosComponent implements OnInit {
 
   cancelEdit(): void {
     this.editingExigidoId = null;
+    this.modalAberto = false;
     this.exigidoForm.reset({ documentoTipoId: 1, tipoPessoa: 'Juridica', porteEmpresa: 'Microempresa', categoriaId: 1, obrigatorio: true, ativo: true });
     this.applyTipoPessoaRules('Juridica');
   }

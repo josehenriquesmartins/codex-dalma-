@@ -35,7 +35,21 @@ public sealed record DocumentoValidacaoDetalheDto(
     StatusValidacaoDocumento StatusValidacaoDocumento,
     string? ObservacaoAvaliacao,
     long? AvaliadoPorUsuarioId,
-    DateTime? DataHoraAvaliacao);
+    DateTime? DataHoraAvaliacao,
+    string? IaSugestao,
+    string? IaJustificativa,
+    string? IaProvider,
+    DateTime? IaAnalisadoEm);
+
+public sealed record AnaliseIaResponse(
+    long DocumentoRegistradoId,
+    string Sugestao,
+    bool TipoConfere,
+    bool VigenciaOk,
+    bool DadosConferem,
+    string Justificativa,
+    string Provider,
+    DateTime AnalisadoEm);
 
 public sealed record DocumentoVisualizacaoDto(
     string NomeArquivo,

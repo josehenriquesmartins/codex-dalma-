@@ -28,6 +28,10 @@ public static class Seeder
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS tamanho_bytes_boleto BIGINT NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS data_hora_upload_boleto TIMESTAMP NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE financeiro_liberacoes ADD COLUMN IF NOT EXISTS numero_af VARCHAR(60) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_sugestao VARCHAR(20) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_justificativa VARCHAR(2000) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_provider VARCHAR(60) NULL;");
+        await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_analisado_em TIMESTAMP NULL;");
 
         if (!context.Categorias.Any())
         {

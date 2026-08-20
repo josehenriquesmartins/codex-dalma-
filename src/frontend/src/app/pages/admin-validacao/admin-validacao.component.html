@@ -35,6 +35,10 @@
         <span class="status-pill pending">{{ envios.length }} registro(s)</span>
       </div>
 
+      <div class="mb-3">
+        <input class="form-control" type="search" placeholder="Pesquisar fornecedor..." [(ngModel)]="buscaEnvios">
+      </div>
+
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead>
@@ -51,7 +55,7 @@
             <tr *ngIf="!carregandoLista && !envios.length">
               <td colspan="6" class="text-center text-muted py-4">Nenhum fornecedor com envio completo foi encontrado para a competência informada.</td>
             </tr>
-            <tr *ngFor="let item of envios" [class.table-active]="selectedEnvioId === item.id">
+            <tr *ngFor="let item of envios | filtroTexto:buscaEnvios" [class.table-active]="selectedEnvioId === item.id">
               <td>{{ item.fornecedor }}</td>
               <td>{{ item.contrato || 'Sem contrato vinculado' }}</td>
               <td>{{ item.mesReferencia }}/{{ item.anoReferencia }}</td>
@@ -134,6 +138,19 @@
                   [(ngModel)]="documento.observacaoRascunho"
                   [placeholder]="documento.observacaoAvaliacao || 'Informe a justificativa da aprovação ou reprovação.'"></textarea>
                 <div class="field-error" *ngIf="documento.observacaoErro">{{ documento.observacaoErro }}</div>
+                <div class="mt-2 p-2 rounded" style="background:#fbfdff;border:1px solid var(--color-border);" *ngIf="documento.iaSugestao">
+                  <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                    <span class="small text-muted text-uppercase fw-semibold">Sugestão IA</span>
+                    <span [class]="iaSugestaoClasse(documento.iaSugestao)">{{ documento.iaSugestao }}</span>
+                    <span class="small text-muted" *ngIf="documento.iaProvider">· {{ documento.iaProvider }}</span>
+                  </div>
+                  <div class="small">{{ documento.iaJustificativa }}</div>
+                  <div class="small text-muted mt-1" *ngIf="documento.iaTipoConfere !== undefined">
+                    Tipo: {{ documento.iaTipoConfere ? 'ok' : 'revisar' }} · Vigência: {{ documento.iaVigenciaOk ? 'ok' : 'revisar' }} · Dados: {{ documento.iaDadosConferem ? 'ok' : 'revisar' }}
+                  </div>
+                  <div class="small text-muted mt-1" *ngIf="documento.iaAnalisadoEm">Analisado em {{ documento.iaAnalisadoEm | date:'short' }}</div>
+                  <div class="small text-muted fst-italic mt-1">Sugestão automática — a decisão final é sua.</div>
+                </div>
               </td>
               <td class="text-end">
                 <div class="actions justify-content-end">
@@ -145,6 +162,10 @@
                   <button class="btn btn-sm btn-danger" type="button" [disabled]="processandoDocumentoId !== null" (click)="validarDocumento(documento, 'Reprovado')">
                     <span class="spinner-border spinner-border-sm me-2" *ngIf="processandoDocumentoId === documento.id && acaoProcessando === 'Reprovado'" aria-hidden="true"></span>
                     {{ processandoDocumentoId === documento.id && acaoProcessando === 'Reprovado' ? 'Reprovando...' : 'Reprovar' }}
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" type="button" [disabled]="analisandoIaId !== null || processandoDocumentoId !== null" (click)="analisarIa(documento)">
+                    <span class="spinner-border spinner-border-sm me-2" *ngIf="analisandoIaId === documento.id" aria-hidden="true"></span>
+                    {{ analisandoIaId === documento.id ? 'Analisando...' : 'Analisar com IA' }}
                   </button>
                 </div>
               </td>

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
+import { emailValidator } from '../../shared/email.util';
 
 @Component({
   selector: 'app-usuarios',
@@ -10,13 +11,15 @@ export class UsuariosComponent implements OnInit {
   usuarios: any[] = [];
   pagina = 1;
   tamanho = 10;
+  filtro = '';
+  modalAberto = false;
   form;
   editingId: number | null = null;
 
   constructor(private readonly api: ApiService, private readonly fb: FormBuilder) {
     this.form = this.fb.group({
       nome: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required, emailValidator]],
       login: ['', Validators.required],
       senha: ['', Validators.required],
       perfil: ['Admin', Validators.required],
@@ -47,12 +50,18 @@ export class UsuariosComponent implements OnInit {
     });
   }
 
+  abrirNovo(): void {
+    this.cancelEdit();
+    this.modalAberto = true;
+  }
+
   edit(item: any): void {
     this.editingId = item.id;
     this.form.get('senha')?.clearValidators();
     this.form.get('senha')?.updateValueAndValidity();
     this.form.patchValue({ ...item, senha: '' });
     this.applyPerfilRules(item.perfil);
+    this.modalAberto = true;
   }
 
   remove(item: any): void {
@@ -62,6 +71,7 @@ export class UsuariosComponent implements OnInit {
 
   cancelEdit(): void {
     this.editingId = null;
+    this.modalAberto = false;
     this.form.get('senha')?.setValidators(Validators.required);
     this.form.get('senha')?.updateValueAndValidity();
     this.form.reset({ perfil: 'Admin', ativo: true, fornecedorId: null });

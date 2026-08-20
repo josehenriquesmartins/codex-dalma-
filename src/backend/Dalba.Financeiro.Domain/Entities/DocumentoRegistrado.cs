@@ -18,6 +18,10 @@ public class DocumentoRegistrado : BaseEntity
     public long? AvaliadoPorUsuarioId { get; set; }
     public DateTime? DataHoraAvaliacao { get; set; }
     public string? ObservacaoAvaliacao { get; set; }
+    public string? IaSugestao { get; set; }
+    public string? IaJustificativa { get; set; }
+    public string? IaProvider { get; set; }
+    public DateTime? IaAnalisadoEm { get; set; }
 
     public DocumentoEnviado? DocumentoEnviado { get; set; }
     public DocumentoTipo? DocumentoTipo { get; set; }

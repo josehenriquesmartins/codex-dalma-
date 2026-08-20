@@ -179,7 +179,7 @@ public class FornecedorService
     public async Task<long> CreateAsync(FornecedorRequest request, CancellationToken ct)
     {
         await ValidateFornecedorAsync(request, null, ct);
-        var documentoNormalizado = ValidationHelper.SomenteDigitos(request.CpfOuCnpj);
+        var documentoNormalizado = ValidationHelper.NormalizarDocumento(request.CpfOuCnpj);
 
         var entity = new Fornecedor
         {
@@ -218,7 +218,7 @@ public class FornecedorService
     {
         var entity = await _context.Fornecedores.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new AppException("Fornecedor não encontrado.", 404);
         await ValidateFornecedorAsync(request, id, ct);
-        var documentoNormalizado = ValidationHelper.SomenteDigitos(request.CpfOuCnpj);
+        var documentoNormalizado = ValidationHelper.NormalizarDocumento(request.CpfOuCnpj);
 
         entity.CodigoFornecedor = request.CodigoFornecedor;
         entity.TipoPessoa = request.TipoPessoa;
@@ -310,8 +310,8 @@ public class FornecedorService
     private async Task ValidateFornecedorAsync(FornecedorRequest request, long? id, CancellationToken ct)
     {
         if (!await _context.Categorias.AnyAsync(x => x.Id == request.CategoriaId && x.Ativo, ct)) throw new AppException("Categoria obrigatória e inválida.");
-        if (!ValidationHelper.IsValidEmail(request.Email)) throw new AppException("E-mail inválido.");
-        var document = ValidationHelper.SomenteDigitos(request.CpfOuCnpj);
+        if (!string.IsNullOrWhiteSpace(request.Email) && !ValidationHelper.IsValidEmail(request.Email)) throw new AppException("E-mail inválido.");
+        var document = ValidationHelper.NormalizarDocumento(request.CpfOuCnpj);
         if (request.TipoPessoa == TipoPessoa.Fisica && !ValidationHelper.IsValidCpf(document)) throw new AppException("CPF inválido.");
         if (request.TipoPessoa == TipoPessoa.Juridica && !ValidationHelper.IsValidCnpj(document)) throw new AppException("CNPJ inválido.");
         if (request.TipoPessoa == TipoPessoa.Juridica && !request.PorteEmpresa.HasValue) throw new AppException("Porte da empresa é obrigatório para pessoa jurídica.");
@@ -321,24 +321,24 @@ public class FornecedorService
         var usuarioFornecedorId = id.HasValue
             ? await _context.Usuarios.Where(x => x.FornecedorId == id.Value).Select(x => (long?)x.Id).FirstOrDefaultAsync(ct)
             : null;
-        if (await _context.Usuarios.AnyAsync(x => x.Email == request.Email && x.Id != usuarioFornecedorId, ct)) throw new AppException("E-mail já cadastrado para outro usuário.");
-        if (await _context.Usuarios.AnyAsync(x => x.Login == request.Email && x.Id != usuarioFornecedorId, ct)) throw new AppException("Login derivado do e-mail já está em uso.");
-        if (string.IsNullOrWhiteSpace(request.Pais)) throw new AppException("País é obrigatório.");
+        if (!string.IsNullOrWhiteSpace(request.Email) && await _context.Usuarios.AnyAsync(x => x.Email == request.Email && x.Id != usuarioFornecedorId, ct)) throw new AppException("E-mail já cadastrado para outro usuário.");
+        if (await _context.Usuarios.AnyAsync(x => x.Login == document && x.Id != usuarioFornecedorId, ct)) throw new AppException("Já existe um usuário com este CPF/CNPJ.");
     }
 
     private async Task EnsureUsuarioFornecedorAsync(Fornecedor fornecedor, string documentoNormalizado, bool isNewSupplier, CancellationToken ct)
     {
         var usuario = await _context.Usuarios.FirstOrDefaultAsync(x => x.FornecedorId == fornecedor.Id, ct);
 
+        var emailUsuario = string.IsNullOrWhiteSpace(fornecedor.Email) ? $"{documentoNormalizado}@sememail.local" : fornecedor.Email;
+
         if (usuario is null)
         {
-            var senhaInicial = documentoNormalizado[..Math.Min(6, documentoNormalizado.Length)];
             usuario = new Usuario
             {
                 Nome = fornecedor.NomeOuRazaoSocial,
-                Email = fornecedor.Email,
-                Login = fornecedor.Email,
-                SenhaHashSha256 = SecurityHelper.ComputeSha256(senhaInicial),
+                Email = emailUsuario,
+                Login = documentoNormalizado,
+                SenhaHashSha256 = SecurityHelper.ComputeSha256(documentoNormalizado),
                 Perfil = PerfilAcesso.Fornecedor,
                 FornecedorId = fornecedor.Id,
                 Ativo = fornecedor.Ativo
@@ -349,8 +349,8 @@ public class FornecedorService
         }
 
         usuario.Nome = fornecedor.NomeOuRazaoSocial;
-        usuario.Email = fornecedor.Email;
-        usuario.Login = fornecedor.Email;
+        usuario.Email = emailUsuario;
+        usuario.Login = documentoNormalizado;
         usuario.Perfil = PerfilAcesso.Fornecedor;
         usuario.Ativo = fornecedor.Ativo;
         usuario.DataHoraAtualizacao = DbClock.Now;
@@ -359,7 +359,7 @@ public class FornecedorService
     private async Task<FornecedorRequest> BuildImportRequestAsync(Dictionary<string, string> row, CancellationToken ct)
     {
         var tipoPessoa = ParseTipoPessoa(GetRequired(row, "tipopessoa", "tipo"));
-        var documento = ValidationHelper.SomenteDigitos(GetRequired(row, "cpfoucnpj", "cpfcnpj", "documento", tipoPessoa == TipoPessoa.Fisica ? "cpf" : "cnpj"));
+        var documento = ValidationHelper.NormalizarDocumento(GetRequired(row, "cpfoucnpj", "cpfcnpj", "documento", tipoPessoa == TipoPessoa.Fisica ? "cpf" : "cnpj"));
         var categoriaId = await ResolveCategoriaIdAsync(GetRequired(row, "categoria", "categoriaid", "categoriacodigo"), ct);
         var telefone = ValidationHelper.SomenteDigitos(Get(row, "telefone", "numerotelefone", "celular"));
         var ddd = ValidationHelper.SomenteDigitos(Get(row, "ddd", "dddtelefone"));
