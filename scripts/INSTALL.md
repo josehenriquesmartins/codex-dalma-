@@ -73,7 +73,6 @@ senhas apos o primeiro login).
 
 ## Observacao sobre o frontend
 
-O container `dalba-web` roda o Angular em modo de desenvolvimento (`npm start`), o
-mesmo usado localmente pela equipe - nao ha build de producao (Nginx + `ng build`)
-configurado neste projeto ainda. Funciona para homologacao, mas para producao externa
-vale revisitar esse ponto com a equipe de desenvolvimento.
+O container `dalba-web` gera o build do Angular durante a construcao da imagem e
+publica os arquivos estaticos via Nginx. A porta externa continua definida por
+`WEB_PORT` no `.env`; dentro do container o Nginx escuta na porta `80`.
