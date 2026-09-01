@@ -285,7 +285,8 @@ button, input, select, textarea { font: inherit; }
   background: #f8fafc;
   overflow: auto;
 }
-.document-modal-body img {
+.document-modal-body img,
+.document-frame {
   width: 100%;
   height: 100%;
   border: 0;
@@ -295,20 +296,6 @@ button, input, select, textarea { font: inherit; }
   object-fit: contain;
   padding: 16px;
 }
-.pdf-viewer {
-  min-height: 100%;
-  padding: 18px;
-}
-.pdf-page-canvas {
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  display: block;
-  margin: 0 auto 18px;
-  border-radius: 0.35rem;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-}
 @media (max-width: 980px) {
   .page-shell { padding: 16px; }
   .crud-card { padding: 1rem; }
@@ -316,7 +303,6 @@ button, input, select, textarea { font: inherit; }
   .document-modal { width: 100vw; height: 94vh; }
   .document-modal-header { align-items: flex-start; }
   .document-modal-header .actions { justify-content: flex-end; }
-  .pdf-viewer { padding: 10px; }
 }
 
 @media (max-width: 640px) {

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { environment } from '../../environments/environment';
+import { cepValidator, formatarCep, somenteDigitosCep } from '../../shared/cep.util';
 import { documentoValidator } from '../../shared/documento.util';
 import { emailValidator } from '../../shared/email.util';
 
@@ -21,6 +22,10 @@ export class FornecedoresComponent implements OnInit {
   arquivoImportacao: File | null = null;
   importando = false;
   resultadoImportacao: any[] = [];
+  consultandoCep = false;
+  cepTocado = false;
+  cepErro = '';
+  private ultimoCepConsultado = '';
 
   constructor(private readonly api: ApiService, private readonly fb: FormBuilder) {
     this.form = this.fb.group({
@@ -35,7 +40,7 @@ export class FornecedoresComponent implements OnInit {
       dddTelefone: [''],
       numeroTelefone: [''],
       email: ['', [emailValidator]],
-      cep: [''],
+      cep: ['', [cepValidator]],
       logradouro: [''],
       numero: [''],
       complemento: [''],
@@ -47,6 +52,7 @@ export class FornecedoresComponent implements OnInit {
     });
 
     this.form.get('tipoPessoa')?.valueChanges.subscribe((tipoPessoa) => this.applyTipoPessoaRules(tipoPessoa));
+    this.form.get('cep')?.valueChanges.subscribe((value) => this.onCepChange(value));
   }
 
   ngOnInit(): void {
@@ -111,6 +117,10 @@ export class FornecedoresComponent implements OnInit {
   cancelEdit(): void {
     this.editingId = null;
     this.modalAberto = false;
+    this.cepErro = '';
+    this.cepTocado = false;
+    this.consultandoCep = false;
+    this.ultimoCepConsultado = '';
     this.form.reset({ tipoPessoa: 'Juridica', porteEmpresa: 'Microempresa', categoriaId: 1, ddiTelefone: '+55', dddTelefone: '11', estado: 'SP', pais: 'Brasil', ativo: true });
     this.applyTipoPessoaRules('Juridica');
   }
@@ -130,6 +140,111 @@ export class FornecedoresComponent implements OnInit {
   campoInvalido(nome: string): boolean {
     const control = this.form.get(nome);
     return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  get cepInvalido(): boolean {
+    const control = this.form.get('cep');
+    return !!control && (control.invalid || !!this.cepErro) && (this.cepTocado || control.dirty || control.touched);
+  }
+
+  onCepInput(event: Event): void {
+    this.cepTocado = true;
+    const control = this.form.get('cep');
+    if (!control) return;
+
+    const input = event.target as HTMLInputElement | null;
+    const value = input?.value ?? String(control.value ?? '');
+    const digits = somenteDigitosCep(value);
+    if (digits.length <= 8) {
+      const formatted = formatarCep(value);
+      if (formatted !== value) {
+        control.setValue(formatted, { emitEvent: false });
+        if (input) {
+          input.value = formatted;
+        }
+      }
+    }
+
+    control.updateValueAndValidity({ emitEvent: false });
+    this.cepErro = '';
+
+    if (digits.length === 8 && !control.hasError('cep')) {
+      this.onCepChange(String(control.value ?? ''));
+    }
+  }
+
+  validarCepAoSair(): void {
+    this.cepTocado = true;
+    const control = this.form.get('cep');
+    if (!control) return;
+
+    control.markAsTouched();
+    const digits = somenteDigitosCep(control.value);
+    if (digits.length === 8 && !control.hasError('cep')) {
+      this.onCepChange(String(control.value ?? ''));
+    }
+  }
+
+  private onCepChange(value: string | null): void {
+    this.cepErro = '';
+    const control = this.form.get('cep');
+    if (!control) return;
+
+    const digits = somenteDigitosCep(value);
+    const formatted = formatarCep(value);
+    if (digits.length <= 8 && formatted !== value) {
+      control.setValue(formatted, { emitEvent: false });
+    }
+
+    if (digits.length !== 8 || control.hasError('cep')) {
+      return;
+    }
+
+    if (digits === this.ultimoCepConsultado) {
+      return;
+    }
+
+    this.ultimoCepConsultado = digits;
+    this.buscarCep(digits);
+  }
+
+  private buscarCep(cep: string): void {
+    this.consultandoCep = true;
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Falha na consulta do CEP.');
+        }
+
+        const data = await response.json();
+        if (data?.erro) {
+          this.marcarCepNaoEncontrado();
+          return;
+        }
+
+        this.form.patchValue({
+          cep: formatarCep(cep),
+          logradouro: data.logradouro || this.form.get('logradouro')?.value || '',
+          bairro: data.bairro || this.form.get('bairro')?.value || '',
+          cidade: data.localidade || this.form.get('cidade')?.value || '',
+          estado: data.uf || this.form.get('estado')?.value || '',
+          pais: 'Brasil'
+        }, { emitEvent: false });
+        this.form.get('cep')?.setErrors(null);
+      })
+      .catch(() => {
+        this.cepErro = 'Não foi possível consultar o CEP agora.';
+      })
+      .finally(() => {
+        this.consultandoCep = false;
+      });
+  }
+
+  private marcarCepNaoEncontrado(): void {
+    const control = this.form.get('cep');
+    control?.setErrors({ ...(control.errors ?? {}), cepNaoEncontrado: true });
+    control?.markAsTouched();
+    this.cepErro = 'CEP não encontrado.';
   }
 
   private applyTipoPessoaRules(tipoPessoa: string | null): void {
@@ -153,6 +268,7 @@ export class FornecedoresComponent implements OnInit {
     const value = this.form.getRawValue();
     return {
       ...value,
+      cep: formatarCep(value.cep),
       porteEmpresa: value.tipoPessoa === 'Fisica' ? null : value.porteEmpresa
     };
   }

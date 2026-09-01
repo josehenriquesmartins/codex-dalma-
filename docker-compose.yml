@@ -36,7 +36,7 @@ services:
       dockerfile: src/frontend.Dockerfile
     container_name: dalba-web
     ports:
-      - "${WEB_PORT}:4200"
+      - "${WEB_PORT}:80"
     depends_on:
       - api
 

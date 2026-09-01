@@ -194,7 +194,7 @@ public class FornecedorService
             DddTelefone = request.DddTelefone,
             NumeroTelefone = request.NumeroTelefone,
             Email = request.Email,
-            Cep = request.Cep,
+            Cep = ValidationHelper.FormatCep(request.Cep),
             Logradouro = request.Logradouro,
             Numero = request.Numero,
             Complemento = request.Complemento,
@@ -231,7 +231,7 @@ public class FornecedorService
         entity.DddTelefone = request.DddTelefone;
         entity.NumeroTelefone = request.NumeroTelefone;
         entity.Email = request.Email;
-        entity.Cep = request.Cep;
+        entity.Cep = ValidationHelper.FormatCep(request.Cep);
         entity.Logradouro = request.Logradouro;
         entity.Numero = request.Numero;
         entity.Complemento = request.Complemento;
@@ -311,6 +311,7 @@ public class FornecedorService
     {
         if (!await _context.Categorias.AnyAsync(x => x.Id == request.CategoriaId && x.Ativo, ct)) throw new AppException("Categoria obrigatória e inválida.");
         if (!string.IsNullOrWhiteSpace(request.Email) && !ValidationHelper.IsValidEmail(request.Email)) throw new AppException("E-mail inválido.");
+        if (!string.IsNullOrWhiteSpace(request.Cep) && !ValidationHelper.IsValidCep(request.Cep)) throw new AppException("CEP inválido. Informe no formato 00000-000.");
         var document = ValidationHelper.NormalizarDocumento(request.CpfOuCnpj);
         if (request.TipoPessoa == TipoPessoa.Fisica && !ValidationHelper.IsValidCpf(document)) throw new AppException("CPF inválido.");
         if (request.TipoPessoa == TipoPessoa.Juridica && !ValidationHelper.IsValidCnpj(document)) throw new AppException("CNPJ inválido.");

@@ -62,6 +62,9 @@
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="!envio.documentos?.length">
+              <td colspan="6" class="text-center text-muted py-4">Nenhum documento exigido foi configurado para este fornecedor.</td>
+            </tr>
             <tr *ngFor="let item of envio.documentos">
               <td>{{ item.nomeDocumento }}</td>
               <td>{{ envio.contratoNumero || envio.contratoId || '-' }}</td>
@@ -79,7 +82,8 @@
 
     <div class="card crud-card" *ngIf="envio">
       <div class="card-title">Upload de documento</div>
-      <div class="alert alert-info" *ngIf="!documentosPendentes.length">Todos os documentos desta competência já foram enviados.</div>
+      <div class="alert alert-warning" *ngIf="!envio.documentos?.length">Não há documentos exigidos configurados para esta competência. Solicite ao Admin o cadastro em Documentos Exigidos.</div>
+      <div class="alert alert-info" *ngIf="envio.documentos?.length && !documentosPendentes.length">Todos os documentos desta competência já foram enviados.</div>
       <div class="row g-3">
         <div class="col-12 col-md-5">
           <label class="form-label required">Tipo do documento</label>
@@ -116,7 +120,7 @@
         </div>
       </div>
       <div class="document-modal-body">
-        <div *ngIf="isVisualizadorPdf()" #pdfContainer class="pdf-viewer"></div>
+        <iframe *ngIf="isVisualizadorPdf()" class="document-frame" [src]="visualizadorUrl" title="Pré-visualização do PDF"></iframe>
         <div class="text-danger text-center py-4" *ngIf="visualizadorErro">{{ visualizadorErro }}</div>
         <img *ngIf="isVisualizadorImagem()" [src]="visualizadorUrl" [alt]="documentoVisualizado.nomeOriginalArquivo">
         <div class="text-muted text-center py-5" *ngIf="!isVisualizadorPdf() && !isVisualizadorImagem()">Este tipo de arquivo não possui pré-visualização.</div>

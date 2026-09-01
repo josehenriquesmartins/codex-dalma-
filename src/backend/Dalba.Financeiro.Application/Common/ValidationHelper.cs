@@ -6,6 +6,14 @@ public static class ValidationHelper
 {
     public static string SomenteDigitos(string? value) => Regex.Replace(value ?? string.Empty, "[^0-9]", string.Empty);
 
+    public static bool IsValidCep(string? cep) => SomenteDigitos(cep).Length == 8;
+
+    public static string FormatCep(string? cep)
+    {
+        var digits = SomenteDigitos(cep);
+        return digits.Length == 8 ? $"{digits[..5]}-{digits[5..]}" : digits;
+    }
+
     /// <summary>
     /// Normaliza CPF/CNPJ removendo pontuação e mantendo alfanuméricos em maiúsculo.
     /// CPF continua só com dígitos; CNPJ preserva letras (novo padrão alfanumérico).

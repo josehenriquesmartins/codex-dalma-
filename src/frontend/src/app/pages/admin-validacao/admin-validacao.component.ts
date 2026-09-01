@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ApiService } from '../../core/api.service';
 
@@ -7,8 +7,6 @@ import { ApiService } from '../../core/api.service';
   templateUrl: './admin-validacao.component.html'
 })
 export class AdminValidacaoComponent implements OnInit, OnDestroy {
-  @ViewChild('pdfContainer') pdfContainer?: ElementRef<HTMLDivElement>;
-
   readonly hoje = new Date();
 
   filtro = {
@@ -177,9 +175,6 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
       this.visualizadorErro = '';
       this.documentoVisualizado = documento;
 
-      if (blob.type === 'application/pdf') {
-        setTimeout(() => this.renderPdf(blob));
-      }
     });
   }
 
@@ -211,40 +206,6 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
     if (nomeNormalizado.endsWith('.jpg') || nomeNormalizado.endsWith('.jpeg')) return 'image/jpeg';
     if (nomeNormalizado.endsWith('.png')) return 'image/png';
     return blob.type || 'application/octet-stream';
-  }
-
-  private async renderPdf(blob: Blob): Promise<void> {
-    if (!this.pdfContainer) return;
-
-    const container = this.pdfContainer.nativeElement;
-    container.innerHTML = '';
-
-    try {
-      const pdfjsLib = await import('pdfjs-dist');
-
-      const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer(), disableWorker: true } as any).promise;
-      const width = Math.max(container.clientWidth - 24, 320);
-
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-        const page = await pdf.getPage(pageNumber);
-        const viewport = page.getViewport({ scale: 1 });
-        const scale = width / viewport.width;
-        const scaledViewport = page.getViewport({ scale });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) continue;
-
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
-        canvas.className = 'pdf-page-canvas';
-        container.appendChild(canvas);
-
-        await page.render({ canvas, canvasContext: context, viewport: scaledViewport }).promise;
-      }
-    } catch {
-      container.innerHTML = '';
-      this.visualizadorErro = 'Não foi possível carregar a pré-visualização do PDF. Use Abrir em nova aba para consultar o arquivo.';
-    }
   }
 
   arquivoTamanho(tamanhoBytes: number): string {

@@ -196,7 +196,7 @@
         </div>
       </div>
       <div class="document-modal-body">
-        <div *ngIf="isVisualizadorPdf()" #pdfContainer class="pdf-viewer"></div>
+        <iframe *ngIf="isVisualizadorPdf()" class="document-frame" [src]="visualizadorUrl" title="Pré-visualização do PDF"></iframe>
         <div class="text-danger text-center py-4" *ngIf="visualizadorErro">{{ visualizadorErro }}</div>
         <img *ngIf="isVisualizadorImagem()" [src]="visualizadorUrl" [alt]="documentoVisualizado.nomeOriginalArquivo">
         <div class="text-muted text-center py-5" *ngIf="!isVisualizadorPdf() && !isVisualizadorImagem()">Este tipo de arquivo não possui pré-visualização.</div>

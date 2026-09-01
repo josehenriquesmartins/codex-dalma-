@@ -390,6 +390,12 @@ public class SupplierPortalService
                 uploaded?.DataHoraUpload);
         }).ToList();
 
+        var responseMessage = mensagem;
+        if (docs.Count == 0)
+        {
+            responseMessage = "Nenhum documento exigido foi configurado para a categoria, tipo de pessoa e porte deste fornecedor. Cadastre os documentos exigidos antes do envio.";
+        }
+
         return new EnvioMensalResponse(
             envio.Id,
             envio.FornecedorId,
@@ -401,7 +407,7 @@ public class SupplierPortalService
             envio.AnoReferencia,
             envio.Status,
             envio.Observacao,
-            mensagem,
+            responseMessage,
             docs);
     }
 
@@ -423,7 +429,7 @@ public class SupplierPortalService
             .Where(x => x.DocumentoEnviadoId == envioId && x.StatusValidacaoDocumento != StatusValidacaoDocumento.Reprovado)
             .Select(x => x.DocumentoTipoId).ToListAsync(ct);
 
-        return requiredIds.All(id => sentIds.Contains(id)) ? StatusEnvioMensal.Enviado : StatusEnvioMensal.Pendente;
+        return requiredIds.Count > 0 && requiredIds.All(id => sentIds.Contains(id)) ? StatusEnvioMensal.Enviado : StatusEnvioMensal.Pendente;
     }
 }
 
