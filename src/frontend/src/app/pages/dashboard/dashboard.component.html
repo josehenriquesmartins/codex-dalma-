@@ -14,14 +14,16 @@
     <div class="row g-3 align-items-end">
       <div class="col-12 col-sm-4 col-lg-3">
         <label class="form-label">Mês</label>
-        <input class="form-control" type="number" min="1" max="12" name="mesReferencia" [(ngModel)]="filtro.mesReferencia">
+        <input class="form-control" type="number" min="1" max="12" name="mesReferencia" [(ngModel)]="filtro.mesReferencia" (ngModelChange)="filtroTocado = true" [class.is-invalid]="filtroTocado && mesInvalido">
+        <div class="field-error" *ngIf="filtroTocado && mesInvalido">Informe um mês entre 1 e 12.</div>
       </div>
       <div class="col-12 col-sm-4 col-lg-3">
         <label class="form-label">Ano</label>
-        <input class="form-control" type="number" min="2000" max="2100" name="anoReferencia" [(ngModel)]="filtro.anoReferencia">
+        <input class="form-control" type="number" min="2000" max="2100" name="anoReferencia" [(ngModel)]="filtro.anoReferencia" (ngModelChange)="filtroTocado = true" [class.is-invalid]="filtroTocado && anoInvalido">
+        <div class="field-error" *ngIf="filtroTocado && anoInvalido">Informe um ano entre 2000 e 2100.</div>
       </div>
       <div class="col-12 col-sm-4 col-lg-3">
-        <button class="btn btn-primary w-100" type="submit" [disabled]="loading">
+        <button class="btn btn-primary w-100" type="submit" [disabled]="loading || !filtroValido">
           <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
           Averiguar
         </button>

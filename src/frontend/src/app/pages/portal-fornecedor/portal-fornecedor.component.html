@@ -12,23 +12,25 @@
       <div class="row g-3">
         <div class="col-12 col-md-3">
           <label class="form-label required">Mês</label>
-          <input class="form-control" type="number" [formControl]="form.controls.mesReferencia">
-          <div class="field-error" *ngIf="form.controls.mesReferencia.touched && form.controls.mesReferencia.hasError('required')">Informe o mês.</div>
+          <input class="form-control" type="number" min="1" max="12" [formControl]="form.controls.mesReferencia" [class.is-invalid]="campoInvalido('mesReferencia')">
+          <div class="field-error" *ngIf="campoInvalido('mesReferencia') && form.controls.mesReferencia.hasError('required')">Informe o mês.</div>
+          <div class="field-error" *ngIf="campoInvalido('mesReferencia') && (form.controls.mesReferencia.hasError('min') || form.controls.mesReferencia.hasError('max'))">Informe um mês entre 1 e 12.</div>
         </div>
         <div class="col-12 col-md-3">
           <label class="form-label required">Ano</label>
-          <input class="form-control" type="number" [formControl]="form.controls.anoReferencia">
-          <div class="field-error" *ngIf="form.controls.anoReferencia.touched && form.controls.anoReferencia.hasError('required')">Informe o ano.</div>
+          <input class="form-control" type="number" min="2020" [formControl]="form.controls.anoReferencia" [class.is-invalid]="campoInvalido('anoReferencia')">
+          <div class="field-error" *ngIf="campoInvalido('anoReferencia') && form.controls.anoReferencia.hasError('required')">Informe o ano.</div>
+          <div class="field-error" *ngIf="campoInvalido('anoReferencia') && form.controls.anoReferencia.hasError('min')">Informe um ano a partir de 2020.</div>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label required">Contrato</label>
-          <select class="form-select" [formControl]="form.controls.contratoId">
+          <select class="form-select" [formControl]="form.controls.contratoId" [class.is-invalid]="campoInvalido('contratoId')">
             <option [ngValue]="null">Selecione</option>
             <option *ngFor="let contrato of contratos" [ngValue]="contrato.id">
               {{ contrato.numeroContrato }} - {{ contrato.descricao }}
             </option>
           </select>
-          <div class="field-error" *ngIf="form.controls.contratoId.touched && form.controls.contratoId.hasError('required')">Selecione o contrato.</div>
+          <div class="field-error" *ngIf="campoInvalido('contratoId') && form.controls.contratoId.hasError('required')">Selecione o contrato.</div>
         </div>
         <div class="col-12 col-md-6 d-flex align-items-end">
           <button class="btn btn-primary w-100 w-md-auto" (click)="carregar()" [disabled]="form.invalid">Abrir competência</button>
@@ -81,14 +83,14 @@
       <div class="row g-3">
         <div class="col-12 col-md-5">
           <label class="form-label required">Tipo do documento</label>
-          <select class="form-select" [formControl]="uploadForm.controls.documentoTipoId">
+          <select class="form-select" [formControl]="uploadForm.controls.documentoTipoId" [class.is-invalid]="campoUploadInvalido('documentoTipoId')">
             <option *ngFor="let item of documentosPendentes" [ngValue]="item.documentoTipoId">{{ item.nomeDocumento }}</option>
           </select>
-          <div class="field-error" *ngIf="uploadForm.controls.documentoTipoId.touched && uploadForm.controls.documentoTipoId.hasError('required')">Selecione o documento.</div>
+          <div class="field-error" *ngIf="campoUploadInvalido('documentoTipoId') && uploadForm.controls.documentoTipoId.hasError('required')">Selecione o documento.</div>
         </div>
         <div class="col-12 col-md-7">
           <label class="form-label required">Arquivo</label>
-          <input class="form-control" type="file" multiple (change)="onFileChange($event)">
+          <input class="form-control" type="file" multiple (change)="onFileChange($event)" [class.is-invalid]="fileTouched && !arquivos.length">
           <div class="form-text">Selecione um ou mais arquivos para o mesmo documento.</div>
           <div class="field-error" *ngIf="fileTouched && !arquivos.length">Selecione ao menos um arquivo.</div>
         </div>

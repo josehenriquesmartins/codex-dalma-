@@ -12,16 +12,16 @@
       <div class="row g-3 align-items-end">
         <div class="col-12 col-md-3">
           <label class="form-label required">Mês de referência</label>
-          <input class="form-control" type="number" min="1" max="12" [(ngModel)]="filtro.mesReferencia">
-          <div class="field-error" *ngIf="filtroTocado && !filtro.mesReferencia">Informe o mês.</div>
+          <input class="form-control" type="number" min="1" max="12" [(ngModel)]="filtro.mesReferencia" (ngModelChange)="filtroTocado = true" [class.is-invalid]="filtroTocado && mesInvalido">
+          <div class="field-error" *ngIf="filtroTocado && mesInvalido">Informe um mês entre 1 e 12.</div>
         </div>
         <div class="col-12 col-md-3">
           <label class="form-label required">Ano de referência</label>
-          <input class="form-control" type="number" min="2020" [(ngModel)]="filtro.anoReferencia">
-          <div class="field-error" *ngIf="filtroTocado && !filtro.anoReferencia">Informe o ano.</div>
+          <input class="form-control" type="number" min="2020" max="2100" [(ngModel)]="filtro.anoReferencia" (ngModelChange)="filtroTocado = true" [class.is-invalid]="filtroTocado && anoInvalido">
+          <div class="field-error" *ngIf="filtroTocado && anoInvalido">Informe um ano entre 2020 e 2100.</div>
         </div>
         <div class="col-12 col-md-4">
-          <button class="btn btn-primary w-100" type="button" (click)="buscarEnvios()" [disabled]="!filtro.mesReferencia || !filtro.anoReferencia">Pesquisar fornecedores</button>
+          <button class="btn btn-primary w-100" type="button" (click)="buscarEnvios()" [disabled]="!filtroValido">Pesquisar fornecedores</button>
         </div>
       </div>
     </div>
@@ -60,7 +60,7 @@
               <td>{{ item.contrato || 'Sem contrato vinculado' }}</td>
               <td>{{ item.mesReferencia }}/{{ item.anoReferencia }}</td>
               <td><span class="status-pill">{{ statusEnvioLabel(item.status) }}</span></td>
-              <td>{{ item.dataHoraRegistro | date:'short' }}</td>
+              <td>{{ item.dataHoraRegistro | dataHoraBr }}</td>
               <td class="text-end">
                 <button class="btn btn-outline-primary btn-sm" type="button" (click)="selecionarEnvio(item.id)">Analisar</button>
               </td>
@@ -105,7 +105,7 @@
         <div class="col-12 col-lg-4">
           <div class="validation-summary-box">
             <div class="small text-muted text-uppercase fw-semibold">Data do envio</div>
-            <div class="fw-semibold">{{ envioSelecionado.dataHoraRegistro | date:'short' }}</div>
+            <div class="fw-semibold">{{ envioSelecionado.dataHoraRegistro | dataHoraBr }}</div>
           </div>
         </div>
       </div>
@@ -129,7 +129,7 @@
                 <div class="small text-muted">{{ documento.extensao }} | {{ arquivoTamanho(documento.tamanhoBytes) }}</div>
               </td>
               <td>{{ documento.nomeOriginalArquivo }}</td>
-              <td>{{ documento.dataHoraUpload | date:'short' }}</td>
+              <td>{{ documento.dataHoraUpload | dataHoraBr }}</td>
               <td><span [class]="statusClasse(documento.statusValidacaoDocumento)">{{ documento.statusValidacaoDocumento }}</span></td>
               <td style="min-width: 260px;">
                 <textarea
@@ -148,7 +148,7 @@
                   <div class="small text-muted mt-1" *ngIf="documento.iaTipoConfere !== undefined">
                     Tipo: {{ documento.iaTipoConfere ? 'ok' : 'revisar' }} · Vigência: {{ documento.iaVigenciaOk ? 'ok' : 'revisar' }} · Dados: {{ documento.iaDadosConferem ? 'ok' : 'revisar' }}
                   </div>
-                  <div class="small text-muted mt-1" *ngIf="documento.iaAnalisadoEm">Analisado em {{ documento.iaAnalisadoEm | date:'short' }}</div>
+                  <div class="small text-muted mt-1" *ngIf="documento.iaAnalisadoEm">Analisado em {{ documento.iaAnalisadoEm | dataHoraBr }}</div>
                   <div class="small text-muted fst-italic mt-1">Sugestão automática — a decisão final é sua.</div>
                 </div>
               </td>

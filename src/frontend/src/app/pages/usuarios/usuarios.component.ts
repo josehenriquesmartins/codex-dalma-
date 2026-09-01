@@ -82,6 +82,11 @@ export class UsuariosComponent implements OnInit {
     return this.form.get('perfil')?.value === 'Fornecedor';
   }
 
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
   private applyPerfilRules(perfil: string | null): void {
     const fornecedorControl = this.form.get('fornecedorId');
     if (!fornecedorControl) return;

@@ -45,7 +45,7 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
 
   buscarEnvios(limparSelecao = true): void {
     this.filtroTocado = true;
-    if (!this.filtro.mesReferencia || !this.filtro.anoReferencia) return;
+    if (!this.filtroValido) return;
 
     this.carregandoLista = true;
     if (limparSelecao) {
@@ -278,6 +278,20 @@ export class AdminValidacaoComponent implements OnInit, OnDestroy {
     };
 
     return status ? labels[status] ?? status : '';
+  }
+
+  get mesInvalido(): boolean {
+    const mes = Number(this.filtro.mesReferencia);
+    return !Number.isInteger(mes) || mes < 1 || mes > 12;
+  }
+
+  get anoInvalido(): boolean {
+    const ano = Number(this.filtro.anoReferencia);
+    return !Number.isInteger(ano) || ano < 2020 || ano > 2100;
+  }
+
+  get filtroValido(): boolean {
+    return !this.mesInvalido && !this.anoInvalido;
   }
 
   private atualizarStatusLista(envioId: number, status: string): void {

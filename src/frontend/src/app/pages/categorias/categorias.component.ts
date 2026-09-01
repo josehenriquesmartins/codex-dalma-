@@ -37,4 +37,9 @@ export class CategoriasComponent implements OnInit {
     this.api.delete(`/categorias/${item.id}`).subscribe(() => this.load());
   }
   cancelEdit(): void { this.editingId = null; this.modalAberto = false; this.form.reset({ ativo: true }); }
+
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
 }

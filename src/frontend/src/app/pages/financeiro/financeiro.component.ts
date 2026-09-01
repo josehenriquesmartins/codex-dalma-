@@ -19,6 +19,8 @@ export class FinanceiroComponent implements OnInit {
   numeroNotaFiscal = '';
   observacao = '';
   attempted = false;
+  filtroTocado = false;
+  statusTocado = false;
   carregando = false;
 
   constructor(private readonly api: ApiService) {}
@@ -28,6 +30,9 @@ export class FinanceiroComponent implements OnInit {
   }
 
   load(): void {
+    this.filtroTocado = true;
+    if (!this.filtroValido) return;
+
     this.carregando = true;
     this.selecionado = null;
     this.api
@@ -50,6 +55,7 @@ export class FinanceiroComponent implements OnInit {
     this.numeroNotaFiscal = item.numeroNotaFiscal || '';
     this.observacao = '';
     this.attempted = false;
+    this.statusTocado = false;
   }
 
   salvar(): void {
@@ -81,6 +87,20 @@ export class FinanceiroComponent implements OnInit {
     };
 
     return labels[status] ?? status;
+  }
+
+  get mesInvalido(): boolean {
+    const mes = Number(this.filtro.mesReferencia);
+    return !Number.isInteger(mes) || mes < 1 || mes > 12;
+  }
+
+  get anoInvalido(): boolean {
+    const ano = Number(this.filtro.anoReferencia);
+    return !Number.isInteger(ano) || ano < 2020 || ano > 2100;
+  }
+
+  get filtroValido(): boolean {
+    return !this.mesInvalido && !this.anoInvalido;
   }
 
   private queryString(): string {

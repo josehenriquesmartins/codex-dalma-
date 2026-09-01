@@ -69,4 +69,9 @@ export class DocumentosCatalogoComponent implements OnInit {
     this.modalAberto = false;
     this.tipoForm.reset({ ativo: true });
   }
+
+  campoInvalido(nome: string): boolean {
+    const control = this.tipoForm.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
 }

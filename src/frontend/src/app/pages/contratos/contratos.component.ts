@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 
@@ -25,7 +25,7 @@ export class ContratosComponent implements OnInit {
       dataInicio: ['', Validators.required],
       dataFim: [''],
       ativo: [true]
-    });
+    }, { validators: dataFimMaiorOuIgualInicio });
   }
 
   ngOnInit(): void {
@@ -53,7 +53,28 @@ export class ContratosComponent implements OnInit {
   }
   cancelEdit(): void { this.editingId = null; this.modalAberto = false; this.form.reset({ fornecedorId: 1, ativo: true }); }
 
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  get periodoInvalido(): boolean {
+    const dataFim = this.form.get('dataFim');
+    return this.form.hasError('periodoInvalido') && !!dataFim && (dataFim.dirty || dataFim.touched);
+  }
+
   get isFornecedor(): boolean {
     return this.auth.role === 'Fornecedor';
   }
+}
+
+function dataFimMaiorOuIgualInicio(control: AbstractControl): ValidationErrors | null {
+  const dataInicio = control.get('dataInicio')?.value;
+  const dataFim = control.get('dataFim')?.value;
+
+  if (!dataInicio || !dataFim) {
+    return null;
+  }
+
+  return dataFim < dataInicio ? { periodoInvalido: true } : null;
 }

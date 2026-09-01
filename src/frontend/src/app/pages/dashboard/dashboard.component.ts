@@ -16,6 +16,7 @@ export class DashboardComponent implements OnInit {
     anoReferencia: new Date().getFullYear()
   };
   loading = false;
+  filtroTocado = false;
 
   constructor(private readonly api: ApiService, private readonly auth: AuthService) {}
 
@@ -26,9 +27,10 @@ export class DashboardComponent implements OnInit {
   }
 
   load(): void {
+    this.filtroTocado = true;
     const mes = Number(this.filtro.mesReferencia);
     const ano = Number(this.filtro.anoReferencia);
-    if (mes < 1 || mes > 12 || ano < 2000) return;
+    if (!this.filtroValido) return;
 
     const path = this.role === 'Fornecedor' ? '/dashboard/fornecedor' : this.role === 'Financeiro' ? '/dashboard/financeiro' : '/dashboard/admin';
     const query = `?mesReferencia=${mes}&anoReferencia=${ano}`;
@@ -53,7 +55,7 @@ export class DashboardComponent implements OnInit {
       totalFornecedores: 'Fornecedores',
       pendentes: 'Pendentes',
       enviados: 'Enviados',
-      emConformidade: 'Em conformidade',
+      emConformidade: 'Em Conformidade',
       reprovados: 'Reprovados',
       aprovados: 'Aprovados',
       notificacoesPendentes: 'Alertas para Admin',
@@ -105,5 +107,19 @@ export class DashboardComponent implements OnInit {
 
   toneFor(index: number): string {
     return ['tone-blue', 'tone-amber', 'tone-teal', 'tone-green', 'tone-red', 'tone-indigo'][index % 6];
+  }
+
+  get mesInvalido(): boolean {
+    const mes = Number(this.filtro.mesReferencia);
+    return !Number.isInteger(mes) || mes < 1 || mes > 12;
+  }
+
+  get anoInvalido(): boolean {
+    const ano = Number(this.filtro.anoReferencia);
+    return !Number.isInteger(ano) || ano < 2000 || ano > 2100;
+  }
+
+  get filtroValido(): boolean {
+    return !this.mesInvalido && !this.anoInvalido;
   }
 }

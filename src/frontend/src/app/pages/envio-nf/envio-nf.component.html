@@ -69,19 +69,19 @@
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label required">Número NF</label>
-          <input class="form-control" [(ngModel)]="numeroNotaFiscal" placeholder="Informe o número da nota fiscal">
-          <div class="field-error" *ngIf="attempted && !numeroNotaFiscal.trim()">Informe o número da nota fiscal.</div>
+          <input class="form-control" [(ngModel)]="numeroNotaFiscal" (ngModelChange)="nfTocada = true" [class.is-invalid]="(attempted || nfTocada) && !numeroNotaFiscal.trim()" placeholder="Informe o número da nota fiscal">
+          <div class="field-error" *ngIf="(attempted || nfTocada) && !numeroNotaFiscal.trim()">Informe o número da nota fiscal.</div>
         </div>
         <div class="col-12 col-md-4">
           <label class="form-label required">AF</label>
-          <input class="form-control" [(ngModel)]="numeroAf" placeholder="Informe o número da AF">
-          <div class="field-error" *ngIf="attempted && !numeroAf.trim()">Informe o número da AF.</div>
+          <input class="form-control" [(ngModel)]="numeroAf" (ngModelChange)="afTocada = true" [class.is-invalid]="(attempted || afTocada) && !numeroAf.trim()" placeholder="Informe o número da AF">
+          <div class="field-error" *ngIf="(attempted || afTocada) && !numeroAf.trim()">Informe o número da AF.</div>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label required">Arquivo da NF</label>
-          <input class="form-control" type="file" accept=".pdf,.xml,application/pdf,text/xml,application/xml" (change)="onFileChange($event)">
+          <input class="form-control" type="file" accept=".pdf,.xml,application/pdf,text/xml,application/xml" (change)="onFileChange($event)" [class.is-invalid]="(attempted || nfArquivoTocado) && !arquivoNotaFiscal">
           <div class="form-text">Anexe a nota fiscal em PDF ou XML. O sistema valida número da NF, CNPJ/CPF do fornecedor e AF na descrição antes de gravar.</div>
-          <div class="field-error" *ngIf="attempted && !arquivoNotaFiscal">Anexe o arquivo da nota fiscal.</div>
+          <div class="field-error" *ngIf="(attempted || nfArquivoTocado) && !arquivoNotaFiscal">Anexe o arquivo da nota fiscal.</div>
         </div>
         <div class="col-12">
           <label class="form-label">Observação</label>
@@ -129,9 +129,9 @@
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label required">Arquivo do boleto</label>
-          <input class="form-control" type="file" accept=".pdf,application/pdf" (change)="onBoletoFileChange($event)">
+          <input class="form-control" type="file" accept=".pdf,application/pdf" (change)="onBoletoFileChange($event)" [class.is-invalid]="(attemptedBoleto || boletoArquivoTocado) && !arquivoBoleto">
           <div class="form-text">Anexe o boleto bancário em PDF, com tamanho máximo de 10MB.</div>
-          <div class="field-error" *ngIf="attemptedBoleto && !arquivoBoleto">Anexe o arquivo do boleto.</div>
+          <div class="field-error" *ngIf="(attemptedBoleto || boletoArquivoTocado) && !arquivoBoleto">Anexe o arquivo do boleto.</div>
         </div>
         <div class="col-12">
           <label class="form-label">Observação</label>

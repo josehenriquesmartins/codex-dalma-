@@ -17,10 +17,14 @@ export class EnvioNfComponent implements OnInit {
   arquivoBoleto: File | null = null;
   attempted = false;
   attemptedBoleto = false;
+  nfTocada = false;
+  afTocada = false;
+  nfArquivoTocado = false;
+  boletoArquivoTocado = false;
   carregando = false;
   enviando = false;
   enviandoBoleto = false;
-  checklist: Array<{ titulo: string; ok: boolean }> = [];
+  checklist: Array<{ codigo?: string; titulo: string; ok: boolean; valorEncontrado?: string | null }> = [];
 
   constructor(private readonly api: ApiService) {}
 
@@ -51,6 +55,9 @@ export class EnvioNfComponent implements OnInit {
     this.observacao = '';
     this.arquivoNotaFiscal = null;
     this.attempted = false;
+    this.nfTocada = false;
+    this.afTocada = false;
+    this.nfArquivoTocado = false;
     this.checklist = [];
   }
 
@@ -59,23 +66,29 @@ export class EnvioNfComponent implements OnInit {
     this.observacao = '';
     this.arquivoBoleto = null;
     this.attemptedBoleto = false;
+    this.boletoArquivoTocado = false;
   }
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.arquivoNotaFiscal = input.files?.[0] ?? null;
+    this.nfArquivoTocado = true;
     this.checklist = [];
   }
 
   onBoletoFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.arquivoBoleto = input.files?.[0] ?? null;
+    this.boletoArquivoTocado = true;
   }
 
   enviar(): void {
     this.attempted = true;
     this.checklist = [];
-    if (!this.selecionada || !this.numeroNotaFiscal.trim() || !this.numeroAf.trim() || !this.arquivoNotaFiscal) return;
+    if (!this.selecionada || !this.numeroNotaFiscal.trim() || !this.numeroAf.trim() || !this.arquivoNotaFiscal) {
+      this.checklist = this.buildChecklistLocal();
+      return;
+    }
 
     const formData = new FormData();
     formData.append('numeroNotaFiscal', this.numeroNotaFiscal.trim());
@@ -91,14 +104,23 @@ export class EnvioNfComponent implements OnInit {
     }).then(async (response) => {
       const body = await response.json().catch(() => null);
       if (body?.checklist) {
-        this.checklist = body.checklist.map((item: any) => ({ titulo: item.titulo, ok: item.ok }));
+        this.checklist = body.checklist.map((item: any) => ({
+          codigo: item.codigo,
+          titulo: item.titulo,
+          ok: item.ok,
+          valorEncontrado: item.valorEncontrado
+        }));
       }
       this.enviando = false;
       if (!response.ok) {
+        if (!this.checklist.length) {
+          this.checklist = this.buildChecklistLocal();
+        }
         return;
       }
       this.load();
     }).catch(() => {
+      this.checklist = this.buildChecklistLocal();
       this.enviando = false;
     });
   }
@@ -145,5 +167,15 @@ export class EnvioNfComponent implements OnInit {
     };
 
     return labels[status] ?? status;
+  }
+
+  private buildChecklistLocal(): Array<{ codigo: string; titulo: string; ok: boolean }> {
+    return [
+      { codigo: 'NF_NUMERO', titulo: 'Número da NF', ok: false },
+      { codigo: 'AF_EXISTE', titulo: 'AF existe na NF', ok: false },
+      { codigo: 'AF_IGUAL', titulo: 'Número da AF igual a AF da NF', ok: false },
+      { codigo: 'CNPJ_CONFERE', titulo: 'CNPJ confere', ok: false },
+      { codigo: 'CHAVE_ACESSO', titulo: 'Chave de Acesso Existe', ok: false }
+    ];
   }
 }

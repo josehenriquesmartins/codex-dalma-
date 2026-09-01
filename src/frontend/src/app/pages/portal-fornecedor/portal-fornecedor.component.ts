@@ -26,8 +26,8 @@ export class PortalFornecedorComponent implements OnDestroy {
 
   constructor(private readonly api: ApiService, private readonly fb: FormBuilder, private readonly sanitizer: DomSanitizer) {
     this.form = this.fb.group({
-      mesReferencia: [new Date().getMonth() + 1, Validators.required],
-      anoReferencia: [new Date().getFullYear(), Validators.required],
+      mesReferencia: [new Date().getMonth() + 1, [Validators.required, Validators.min(1), Validators.max(12)]],
+      anoReferencia: [new Date().getFullYear(), [Validators.required, Validators.min(2020)]],
       contratoId: [null, Validators.required],
       observacao: ['']
     });
@@ -152,6 +152,16 @@ export class PortalFornecedorComponent implements OnDestroy {
     };
 
     return status ? labels[status] ?? status : '';
+  }
+
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  campoUploadInvalido(nome: string): boolean {
+    const control = this.uploadForm.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
   }
 
   private async renderPdf(blob: Blob): Promise<void> {

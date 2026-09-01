@@ -13,7 +13,7 @@
         <td>{{item.tipoNotificacao}}</td>
         <td>{{item.titulo}}</td>
         <td>{{item.statusEnvio}}</td>
-        <td>{{dataDaNotificacao(item) | date:'short'}}</td>
+        <td>{{dataDaNotificacao(item) | dataHoraBr}}</td>
         <td>
           <span *ngIf="item.statusEnvio === 'Falha'" class="text-danger">{{item.erro || 'Falha ao enviar.'}}</span>
           <span *ngIf="item.statusEnvio !== 'Falha'" class="text-muted">{{item.destinatario}}</span>

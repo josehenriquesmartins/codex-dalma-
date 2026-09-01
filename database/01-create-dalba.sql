@@ -294,7 +294,7 @@ INSERT INTO fornecedores (
 
 INSERT INTO usuarios (nome, email, login, senha_hash_sha256, perfil, fornecedor_id, ativo) VALUES
 ('Administrador Dalba', 'admin@dalba.local', 'admin', 'E86F78A8A3CAF0B60D8E74E5942AA6D86DC150CD3C03338AEF25B7D2D7E3ACC7', 1, NULL, TRUE),
-('Financeiro Dalba', 'financeiro@dalba.local', 'financeiro', '3FD19780BDA9898E8CFFA4429FC0EAC3CBE142295E57E4F9E5AC1DD8EC5C6DC1', 2, NULL, TRUE),
+('Custos Dalba', 'financeiro@dalba.local', 'financeiro', '3FD19780BDA9898E8CFFA4429FC0EAC3CBE142295E57E4F9E5AC1DD8EC5C6DC1', 2, NULL, TRUE),
 ('Fornecedor Exemplo', 'fornecedor@dalba.local', 'fornecedor', 'B803CDF310DF06A5C8A359A79F04A2A167A31477601778C67127FD1D2BE71A90', 3, 1, TRUE);
 
 INSERT INTO contratos (fornecedor_id, numero_contrato, descricao, data_inicio, data_fim, ativo) VALUES

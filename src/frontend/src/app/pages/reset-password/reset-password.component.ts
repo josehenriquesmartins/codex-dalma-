@@ -66,4 +66,9 @@ export class ResetPasswordComponent implements OnInit {
   goToLogin(): void {
     this.router.navigate(['/login']);
   }
+
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
 }

@@ -1,5 +1,7 @@
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { NgModule } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localePt from '@angular/common/locales/pt';
+import { LOCALE_ID, NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
@@ -25,6 +27,10 @@ import { ApiErrorInterceptor } from './core/api-error.interceptor';
 import { JwtInterceptor } from './core/jwt.interceptor';
 import { PaginacaoComponent } from './shared/paginacao.component';
 import { FiltroTextoPipe } from './shared/filtro-texto.pipe';
+import { DataBrPipe } from './shared/data-br.pipe';
+import { DataHoraBrPipe } from './shared/data-hora-br.pipe';
+
+registerLocaleData(localePt);
 
 @NgModule({
   declarations: [
@@ -46,10 +52,13 @@ import { FiltroTextoPipe } from './shared/filtro-texto.pipe';
     NotificacoesComponent,
     ResetPasswordComponent,
     PaginacaoComponent,
-    FiltroTextoPipe
+    FiltroTextoPipe,
+    DataBrPipe,
+    DataHoraBrPipe
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule, AppRoutingModule],
   providers: [
+    { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: ApiErrorInterceptor, multi: true }
   ],

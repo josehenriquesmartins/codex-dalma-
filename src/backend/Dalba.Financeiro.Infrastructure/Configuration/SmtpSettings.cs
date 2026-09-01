@@ -9,5 +9,5 @@ public class SmtpSettings
     public bool Ssl { get; set; } = true;
     public string User { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
-    public string FromName { get; set; } = "DALBA Financeiro";
+    public string FromName { get; set; } = "DALBA Custos";
 }

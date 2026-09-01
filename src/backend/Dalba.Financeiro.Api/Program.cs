@@ -15,9 +15,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "DALBA Financeiro API",
+        Title = "DALBA Custos API",
         Version = "v1",
-        Description = "API de gestão financeira, documental e conformidade de contratos."
+        Description = "API de gestão de custos, documental e conformidade de contratos."
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

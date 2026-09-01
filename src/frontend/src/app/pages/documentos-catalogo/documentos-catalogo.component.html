@@ -46,8 +46,8 @@
       </div>
       <form [formGroup]="tipoForm" (ngSubmit)="save()">
       <div class="row g-3">
-        <div class="col-12 col-md-4"><label class="form-label required">Código</label><input class="form-control" formControlName="codigo"><div class="field-error" *ngIf="tipoForm.get('codigo')?.touched && tipoForm.get('codigo')?.hasError('required')">Informe o código.</div></div>
-        <div class="col-12 col-md-8"><label class="form-label required">Nome</label><input class="form-control" formControlName="nomeDocumento"><div class="field-error" *ngIf="tipoForm.get('nomeDocumento')?.touched && tipoForm.get('nomeDocumento')?.hasError('required')">Informe o nome.</div></div>
+        <div class="col-12 col-md-4"><label class="form-label required">Código</label><input class="form-control" formControlName="codigo" [class.is-invalid]="campoInvalido('codigo')"><div class="field-error" *ngIf="campoInvalido('codigo') && tipoForm.get('codigo')?.hasError('required')">Informe o código.</div></div>
+        <div class="col-12 col-md-8"><label class="form-label required">Nome</label><input class="form-control" formControlName="nomeDocumento" [class.is-invalid]="campoInvalido('nomeDocumento')"><div class="field-error" *ngIf="campoInvalido('nomeDocumento') && tipoForm.get('nomeDocumento')?.hasError('required')">Informe o nome.</div></div>
         <div class="col-12"><label class="form-label">Descrição</label><input class="form-control" formControlName="descricao"></div>
         <div class="col-12 d-flex gap-2 flex-wrap">
           <button class="btn btn-primary" [disabled]="tipoForm.invalid">{{ editingTipoId ? 'Atualizar documento' : 'Salvar documento' }}</button>

@@ -84,6 +84,11 @@ export class DocumentosExigidosComponent implements OnInit {
     return this.exigidoForm.get('tipoPessoa')?.value === 'Fisica';
   }
 
+  campoInvalido(nome: string): boolean {
+    const control = this.exigidoForm.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
   private applyTipoPessoaRules(tipoPessoa: string | null): void {
     const porteControl = this.exigidoForm.get('porteEmpresa');
     if (!porteControl) return;

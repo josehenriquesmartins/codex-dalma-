@@ -127,6 +127,11 @@ export class FornecedoresComponent implements OnInit {
     return this.isPessoaFisica ? 'Informe o CPF' : 'Informe o CNPJ';
   }
 
+  campoInvalido(nome: string): boolean {
+    const control = this.form.get(nome);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
   private applyTipoPessoaRules(tipoPessoa: string | null): void {
     this.form.get('cpfOuCnpj')?.updateValueAndValidity({ emitEvent: false });
     const porteControl = this.form.get('porteEmpresa');

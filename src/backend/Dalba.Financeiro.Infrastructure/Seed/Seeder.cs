@@ -95,7 +95,7 @@ public static class Seeder
                 },
                 new Usuario
                 {
-                    Nome = "Financeiro Dalba",
+                    Nome = "Custos Dalba",
                     Email = "financeiro@dalba.local",
                     Login = "financeiro",
                     SenhaHashSha256 = SecurityHelper.ComputeSha256("Financeiro@123"),
