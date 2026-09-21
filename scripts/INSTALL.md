@@ -1,8 +1,10 @@
 # Instalacao DALBA - Servidor de Homologacao
 
 Este pacote contem tudo que e necessario para subir o sistema DALBA (API .NET 9 +
-frontend Angular + PostgreSQL) em um novo servidor via Docker Compose, incluindo os
-dados atuais do banco de desenvolvimento.
+frontend Angular + PostgreSQL) em um novo servidor via Docker Compose.
+
+Este pacote foi preparado com banco quase vazio: mantem apenas os 3 usuarios padrao
+(`admin`, `financeiro`, `fornecedor`) e os parametros globais de configuracao.
 
 ## 1. Pre-requisitos no servidor
 
@@ -34,38 +36,62 @@ executa automaticamente `database/01-create-dalba.sql` na primeira inicializacao
 (schema + seed padrao). **Aguarde** o container do Postgres ficar saudavel antes do
 proximo passo (`docker compose logs -f postgres`).
 
-## 4. Restaurar os dados atuais (dump incluso no pacote)
+## 4. Preparar banco quase vazio
 
-O pacote inclui `database-dump/dalba-dump-<data>.sql`, um export completo do banco de
-desenvolvimento no momento da geracao deste instalador (inclui fornecedores, usuarios,
-contratos e demais dados ja cadastrados).
-
-Antes de restaurar, **zere o schema criado no passo 3** para evitar conflito de dados
-duplicados (sequences, seeds), pois o dump e um export completo, não incremental:
+Depois que os containers estiverem no ar, execute:
 
 ```powershell
-docker exec -it dalba-postgres psql -U postgres -d DALBA -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-Get-Content .\database-dump\dalba-dump-*.sql | docker exec -i dalba-postgres psql -U postgres -d DALBA
+Get-Content .\scripts\homologacao-quase-vazio.sql | docker exec -i dalba-postgres psql -U postgres -d DALBA
 ```
 
-## 5. Verificar
+Isso remove dados operacionais de homologacao/desenvolvimento e deixa apenas:
+
+- Usuario Admin: `admin / Admin@123`
+- Usuario Custos: `financeiro / Financeiro@123`
+- Usuario Fornecedor: `fornecedor / Fornecedor@123`
+- Parametros de configuracao do sistema
+- Cadastros minimos necessarios para o usuario fornecedor existir
+
+## 5. Configurar backup diario
+
+O pacote inclui dois scripts:
+
+- `scripts/backup-dalba.ps1`: executa backup do banco e do sistema.
+- `scripts/registrar-backup-diario.ps1`: cria/atualiza tarefa diaria do Windows.
+
+Para agendar backup diario as 23:00:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\registrar-backup-diario.ps1 -ProjectDir "C:\Projetos\Dalba" -BackupDir "C:\Backups\Dalba" -Time "23:00"
+```
+
+Para executar um backup manual:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\backup-dalba.ps1 -ProjectDir "C:\Projetos\Dalba" -BackupDir "C:\Backups\Dalba"
+```
+
+O backup gera:
+
+- Dump SQL do banco PostgreSQL.
+- ZIP do sistema sem `node_modules`, `bin`, `obj`, `dist`, `.git`, `.angular` e logs.
+- Retencao padrao: 14 dias.
+
+## 6. Verificar
 
 - Frontend: `http://<servidor>:4200/login`
 - API/Swagger: `http://<servidor>:8080/swagger`
 - Health check: `http://<servidor>:8080/health`
 
-Login com os usuarios existentes no dump (os mesmos do ambiente de origem). Se preferir
-comecar com usuarios seed padrao em vez do dump, pule o passo 4 e use:
-`admin/Admin@123`, `financeiro/Financeiro@123`, `fornecedor/Fornecedor@123` (troque as
-senhas apos o primeiro login).
+Troque as senhas dos usuarios padrao apos o primeiro login.
 
-## 6. Recomendacoes de seguranca para homologacao/producao
+## 7. Recomendacoes de seguranca para homologacao/producao
 
 - Nao exponha a porta do Postgres (`5432`) publicamente; mantenha-a acessivel apenas
   internamente.
 - Publique o frontend/API atras de um proxy reverso com HTTPS (Nginx, Caddy, IIS ou
   Traefik).
-- Troque as senhas dos usuarios seed/importados assim que possivel.
+- Troque as senhas dos usuarios seed assim que possivel.
 - Configure SMTP/SMS/API Keys pela tela Admin "Configuracao" (nao vem no dump se o
   ambiente de origem nao tinha essas integracoes configuradas).
 - Faca backup do volume `dalba-postgres-data` regularmente (ver `docs/banco-de-dados.md`
