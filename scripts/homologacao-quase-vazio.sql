@@ -63,6 +63,8 @@ INSERT INTO usuarios (nome, email, login, senha_hash_sha256, perfil, fornecedor_
 ('Custos Dalba', 'financeiro@dalba.local', 'financeiro', '3FD19780BDA9898E8CFFA4429FC0EAC3CBE142295E57E4F9E5AC1DD8EC5C6DC1', 2, NULL, TRUE),
 ('Fornecedor Sistema', 'fornecedor@dalba.local', 'fornecedor', 'B803CDF310DF06A5C8A359A79F04A2A167A31477601778C67127FD1D2BE71A90', 3, (SELECT id FROM fornecedores WHERE codigo_fornecedor = 'FORN-SISTEMA'), TRUE);
 
+SELECT setval('sq_parametros_sistema', COALESCE((SELECT MAX(id) FROM parametros_sistema), 1), EXISTS(SELECT 1 FROM parametros_sistema));
+
 INSERT INTO parametros_sistema (chave, valor, descricao, ativo) VALUES
 ('UPLOAD_MAX_MB', '10', 'Tamanho maximo do upload em MB', TRUE),
 ('UPLOAD_ALLOWED_EXTENSIONS', '.pdf,.jpg,.jpeg,.png', 'Extensoes permitidas para upload', TRUE),

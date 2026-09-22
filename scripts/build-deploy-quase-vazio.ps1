@@ -31,7 +31,13 @@ try {
     Check-Exit
     createdb -h $PgHost -p $PgPort -U $dbUser $temporaryDb
     Check-Exit
-    psql -h $PgHost -p $PgPort -U $dbUser -d $temporaryDb -v ON_ERROR_STOP=1 -f $schema -f $data -f "$PSScriptRoot/homologacao-quase-vazio.sql" > "$out/validation-$timestamp.log"
+    psql -h $PgHost -p $PgPort -U $dbUser -d $temporaryDb -v ON_ERROR_STOP=1 -f $schema -f $data > "$out/validation-$timestamp.log"
+    Check-Exit
+    foreach ($migration in @('02-add-password-reset-tokens.sql', '04-add-notification-sender.sql', '05-require-contract-per-monthly-submission.sql', '06-add-boleto-financeiro-liberacoes.sql', '07-add-af-financeiro-liberacoes.sql')) {
+        psql -h $PgHost -p $PgPort -U $dbUser -d $temporaryDb -v ON_ERROR_STOP=1 -f "$repoRoot/database/$migration" >> "$out/validation-$timestamp.log"
+        Check-Exit
+    }
+    psql -h $PgHost -p $PgPort -U $dbUser -d $temporaryDb -v ON_ERROR_STOP=1 -f "$PSScriptRoot/homologacao-quase-vazio.sql" >> "$out/validation-$timestamp.log"
     Check-Exit
     $counts = psql -h $PgHost -p $PgPort -U $dbUser -d $temporaryDb -At -c 'select (select count(*) from usuarios), (select count(*) from contratos), (select count(*) from documentos_enviados), (select count(*) from financeiro_liberacoes);'
     Check-Exit
