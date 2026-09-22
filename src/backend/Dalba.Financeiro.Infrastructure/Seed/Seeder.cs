@@ -8,7 +8,7 @@ namespace Dalba.Financeiro.Infrastructure.Seed;
 
 public static class Seeder
 {
-    public static async Task SeedAsync(AppDbContext context)
+    public static async Task SeedAsync(AppDbContext context, bool demoData = true)
     {
         await context.Database.EnsureCreatedAsync();
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE IF EXISTS documentos_registrados DROP CONSTRAINT IF EXISTS uq_documentos_registrados_item;");
@@ -32,6 +32,8 @@ public static class Seeder
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_justificativa VARCHAR(2000) NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_provider VARCHAR(60) NULL;");
         await context.Database.ExecuteSqlRawAsync("ALTER TABLE documentos_registrados ADD COLUMN IF NOT EXISTS ia_analisado_em TIMESTAMP NULL;");
+
+        if (!demoData) return;
 
         if (!context.Categorias.Any())
         {

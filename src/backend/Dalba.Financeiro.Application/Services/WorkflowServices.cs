@@ -769,6 +769,8 @@ public class AdminValidationService
         if (missingRequired || reprovado || pendenteAposAvaliacao)
         {
             envio.Status = StatusEnvioMensal.Pendente;
+            envio.DataHoraValidacaoFinal = null;
+            envio.AvaliadoPorUsuarioId = null;
             await NotificarPendenciaAsync(envio, documentosFaltantes, documentosPendentes, documentosReprovados, ct);
             return;
         }
@@ -872,7 +874,8 @@ public class FinanceiroService
 
         if (statusFinanceiro.HasValue)
         {
-            query = query.Where(x => x.StatusFinanceiro == statusFinanceiro.Value);
+            query = query.Where(x => (x.DocumentoEnviado!.Status == StatusEnvioMensal.EmConformidade
+                ? x.StatusFinanceiro : StatusFinanceiro.PendenciaDocumental) == statusFinanceiro.Value);
         }
 
         return await query
@@ -884,7 +887,7 @@ public class FinanceiroService
                 x.Contrato != null ? x.Contrato.NumeroContrato : null,
                 x.DocumentoEnviado!.MesReferencia,
                 x.DocumentoEnviado.AnoReferencia,
-                x.StatusFinanceiro,
+                x.DocumentoEnviado!.Status == StatusEnvioMensal.EmConformidade ? x.StatusFinanceiro : StatusFinanceiro.PendenciaDocumental,
                 x.NumeroNotaFiscal,
                 x.NumeroAf,
                 x.NomeOriginalNotaFiscal,
@@ -956,7 +959,7 @@ public class FinanceiroService
                 x.Contrato != null ? x.Contrato.NumeroContrato : null,
                 x.DocumentoEnviado!.MesReferencia,
                 x.DocumentoEnviado.AnoReferencia,
-                x.StatusFinanceiro,
+                x.DocumentoEnviado!.Status == StatusEnvioMensal.EmConformidade ? x.StatusFinanceiro : StatusFinanceiro.PendenciaDocumental,
                 x.NumeroNotaFiscal,
                 x.NumeroAf,
                 x.NomeOriginalNotaFiscal,
@@ -987,6 +990,8 @@ public class FinanceiroService
         {
             throw new AppException("Esta liberação não está aguardando nota fiscal.");
         }
+
+        ExigirConformidadeDocumental(entity);
 
         var arquivo = request.ArquivoNotaFiscal ?? throw new AppException("Anexe a nota fiscal em PDF ou XML.");
         if (arquivo.Length == 0 || arquivo.Length > MaxNotaFiscalFileSize) throw new AppException("Arquivo da nota fiscal inválido ou acima do limite de 10MB.");
@@ -1150,6 +1155,8 @@ public class FinanceiroService
             throw new AppException("O boleto só pode ser enviado após o envio da nota fiscal.");
         }
 
+        ExigirConformidadeDocumental(entity);
+
         var arquivo = request.ArquivoBoleto ?? throw new AppException("Anexe o boleto em PDF.");
         if (arquivo.Length == 0 || arquivo.Length > MaxBoletoFileSize) throw new AppException("Arquivo do boleto inválido ou acima do limite de 10MB.");
         var extension = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
@@ -1182,8 +1189,12 @@ public class FinanceiroService
 
     public async Task AtualizarAsync(long id, AtualizarFinanceiroRequest request, CancellationToken ct)
     {
-        var entity = await _context.FinanceiroLiberacoes.FirstOrDefaultAsync(x => x.Id == id, ct)
+        var entity = await _context.FinanceiroLiberacoes.Include(x => x.DocumentoEnviado).FirstOrDefaultAsync(x => x.Id == id, ct)
             ?? throw new AppException("Registro financeiro não encontrado.", 404);
+
+        ExigirConformidadeDocumental(entity);
+        if (!Enum.IsDefined(request.StatusFinanceiro) || request.StatusFinanceiro == StatusFinanceiro.PendenciaDocumental)
+            throw new AppException("Status de custos inválido para atualização.");
 
         entity.StatusFinanceiro = request.StatusFinanceiro;
         entity.NumeroNotaFiscal = request.NumeroNotaFiscal;
@@ -1193,6 +1204,12 @@ public class FinanceiroService
 
         await _context.SaveChangesAsync(ct);
         await _auditService.RegistrarAsync("financeiro_liberacoes", entity.Id, AcaoAuditoria.LiberacaoFinanceiro, $"Status financeiro alterado para {entity.StatusFinanceiro}.", ct);
+    }
+
+    private static void ExigirConformidadeDocumental(FinanceiroLiberacao entity)
+    {
+        if (entity.DocumentoEnviado?.Status != StatusEnvioMensal.EmConformidade)
+            throw new AppException("Pendência documental: regularize os documentos e aguarde nova aprovação antes de enviar NF, boleto ou atualizar Custos.");
     }
 
     private static string EscapeHtml(string value) =>
@@ -1285,19 +1302,20 @@ public class DashboardService
             docsFaltantes,
             await _context.DocumentosEnviados.CountAsync(x => x.FornecedorId == fornecedorId && x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano, ct),
             await _context.Notificacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.DataHoraCriacao >= inicioCompetencia && x.DataHoraCriacao < fimCompetencia, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct));
+            await _context.FinanceiroLiberacoes.CountAsync(x => x.FornecedorId == fornecedorId && x.DocumentoEnviado!.Status == StatusEnvioMensal.EmConformidade && x.DocumentoEnviado.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct));
     }
 
     public async Task<DashboardFinanceiroDto> FinanceiroAsync(short? mesReferencia, short? anoReferencia, CancellationToken ct)
     {
         var competencia = ResolveCompetencia(mesReferencia, anoReferencia);
+        var liberacoes = _context.FinanceiroLiberacoes.Where(x => x.DocumentoEnviado!.Status == StatusEnvioMensal.EmConformidade);
 
         return new DashboardFinanceiroDto(
             await _context.DocumentosEnviados.CountAsync(x => x.MesReferencia == competencia.Mes && x.AnoReferencia == competencia.Ano && x.Status == StatusEnvioMensal.EmConformidade, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.EmAnaliseFinanceira, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.LiberadoParaPagamento, ct),
-            await _context.FinanceiroLiberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.Pago, ct));
+            await liberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.AguardandoEnvioNf, ct),
+            await liberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.EmAnaliseFinanceira, ct),
+            await liberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.LiberadoParaPagamento, ct),
+            await liberacoes.CountAsync(x => x.DocumentoEnviado!.MesReferencia == competencia.Mes && x.DocumentoEnviado.AnoReferencia == competencia.Ano && x.StatusFinanceiro == StatusFinanceiro.Pago, ct));
     }
 
     private static (short Mes, short Ano) ResolveCompetencia(short? mesReferencia, short? anoReferencia)

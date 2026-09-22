@@ -79,6 +79,7 @@ export class FinanceiroComponent implements OnInit {
 
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
+      PendenciaDocumental: 'Pendência documental',
       AguardandoEnvioNf: 'Aguardando envio de NF',
       AguardandoPagamento: 'Aguardando pagamento',
       EmAnaliseFinanceira: 'Em análise financeira',

@@ -6,5 +6,7 @@ public enum StatusFinanceiro
     AguardandoPagamento = 2,
     EmAnaliseFinanceira = 3,
     LiberadoParaPagamento = 4,
-    Pago = 5
+    Pago = 5,
+    // Status de consulta, calculado pela situação documental; não persistir.
+    PendenciaDocumental = 6
 }

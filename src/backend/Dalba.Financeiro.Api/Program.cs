@@ -69,7 +69,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await Seeder.SeedAsync(dbContext);
+    await Seeder.SeedAsync(dbContext, builder.Configuration.GetValue("Seed:DemoData", true));
 }
 
 app.Run();

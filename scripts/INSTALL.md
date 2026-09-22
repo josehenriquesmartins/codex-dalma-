@@ -1,104 +1,78 @@
-# Instalacao DALBA - Servidor de Homologacao
+# DALBA - Deploy completo com banco quase vazio
 
-Este pacote contem tudo que e necessario para subir o sistema DALBA (API .NET 9 +
-frontend Angular + PostgreSQL) em um novo servidor via Docker Compose.
+Pacote de codigo-fonte para construir API .NET 9, Angular/Nginx e PostgreSQL 17.
+Requer Docker Compose e internet para baixar imagens e dependencias. Nao e instalador offline.
+O arquivo deploy/COMMIT.txt identifica a revisao publicada no GitHub.
 
-Este pacote foi preparado com banco quase vazio: mantem apenas os 3 usuarios padrao
-(`admin`, `financeiro`, `fornecedor`) e os parametros globais de configuracao.
+## Conteudo do banco
 
-## 1. Pre-requisitos no servidor
+deploy/database.sql contem schema e dados preparados e validados em banco temporario:
+- Exatamente tres usuarios: admin, financeiro e fornecedor.
+- Senhas iniciais: Admin@123, Financeiro@123 e Fornecedor@123, respectivamente.
+- Configuracoes existentes em parametros_sistema da origem, mais valores padrao ausentes.
+- Categorias e tipos de documento; um fornecedor minimo vinculado ao login fornecedor.
+- Sem contratos, documentos enviados, NF, boletos, notificacoes ou auditoria antiga.
 
-- Docker Engine + Docker Compose plugin instalados (`docker compose version`).
-- Portas livres: `5432` (Postgres), `8080` (API), `4200` (frontend) - ou outras, definidas no `.env`.
-- Acesso de rede liberado para as portas escolhidas, se o acesso for externo.
+O banco de origem nao e apagado. O ZIP e o dump sao privados: podem conter chaves de integracao.
+Nao enviar deploy/database.sql, .env ou backups ao GitHub. Trocar senhas iniciais no primeiro acesso.
+Configuracoes de appsettings/.env nao sao exportadas como parametros: conferir integracoes apos instalar.
 
-## 2. Configurar variaveis de ambiente
+## Instalacao em ambiente novo
+
+Extrair em uma pasta do servidor. Copiar .env.homologacao.example para .env e definir
+POSTGRES_PASSWORD. O JWT_KEY ja e gerado aleatoriamente. Ajustar portas se necessario.
 
 ```powershell
 Copy-Item .env.homologacao.example .env
+docker compose -f docker-compose.yml -f compose.clean.yml up -d --build
+docker compose -f docker-compose.yml -f compose.clean.yml ps
 ```
 
-Edite o `.env` e troque **obrigatoriamente**:
+Abrir http://localhost:4200/login (ou dominio/IP do servidor e WEB_PORT).
+Nginx encaminha /api para a API internamente, inclusive quando publicado com HTTPS.
+O override compose.clean.yml carrega o dump automaticamente somente em volume NOVO
+e desativa a criacao de dados de exemplo. Usar sempre os dois arquivos Compose.
 
-- `POSTGRES_PASSWORD`: defina uma senha forte, exclusiva deste ambiente (nao reutilize
-  a senha de desenvolvimento).
-- `JWT_KEY`: ja vem preenchida com uma chave unica gerada no empacotamento; pode manter
-  ou trocar por outra.
+## Servidor existente
 
-## 3. Subir os containers (schema vazio)
+Um volume existente NAO e limpo ao executar up. Nao remova volumes sem backup.
+Para atualizar codigo mantendo dados e configuracoes do servidor, fazer backup primeiro
+e reconstruir com os dois arquivos Compose. Nao restaurar o dump vazio nesse caso.
+Se o volume existente usa PostgreSQL 16, manter essa imagem em um override proprio:
+nao apontar PostgreSQL 17 diretamente para um volume de dados da versao 16.
+Para substituir deliberadamente o banco por este banco quase vazio, instalar em volume
+novo, com o ambiente anterior parado e preservado para retorno.
 
-```powershell
-docker compose up -d --build
-```
+## Backup diario no Windows
 
-Isso cria os containers `dalba-postgres`, `dalba-api` e `dalba-web`, e o Postgres
-executa automaticamente `database/01-create-dalba.sql` na primeira inicializacao
-(schema + seed padrao). **Aguarde** o container do Postgres ficar saudavel antes do
-proximo passo (`docker compose logs -f postgres`).
-
-## 4. Preparar banco quase vazio
-
-Depois que os containers estiverem no ar, execute:
-
-```powershell
-Get-Content .\scripts\homologacao-quase-vazio.sql | docker exec -i dalba-postgres psql -U postgres -d DALBA
-```
-
-Isso remove dados operacionais de homologacao/desenvolvimento e deixa apenas:
-
-- Usuario Admin: `admin / Admin@123`
-- Usuario Custos: `financeiro / Financeiro@123`
-- Usuario Fornecedor: `fornecedor / Fornecedor@123`
-- Parametros de configuracao do sistema
-- Cadastros minimos necessarios para o usuario fornecedor existir
-
-## 5. Configurar backup diario
-
-O pacote inclui dois scripts:
-
-- `scripts/backup-dalba.ps1`: executa backup do banco e do sistema.
-- `scripts/registrar-backup-diario.ps1`: cria/atualiza tarefa diaria do Windows.
-
-Para agendar backup diario as 23:00:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\registrar-backup-diario.ps1 -ProjectDir "C:\Projetos\Dalba" -BackupDir "C:\Backups\Dalba" -Time "23:00"
-```
-
-Para executar um backup manual:
+O script salva database.dump, uploads.tar.gz e system.zip, incluindo .env e estrutura
+de diretorios; gera hashes SHA256 e marcador SUCCESS. Retencao: 14 dias, apenas backups
+completos. Falha interrompe a limpeza. O destino deve ficar fora da pasta do sistema.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\backup-dalba.ps1 -ProjectDir "C:\Projetos\Dalba" -BackupDir "C:\Backups\Dalba"
+powershell -ExecutionPolicy Bypass -File .\scripts\registrar-backup-diario.ps1 -ProjectDir "C:\Projetos\Dalba" -BackupDir "C:\Backups\Dalba" -Time "23:00"
 ```
 
-O backup gera:
+Agendar no proprio servidor, usando uma conta com acesso ao Docker. A tarefa padrao
+depende da sessao desse usuario e Docker Desktop em execucao. Para executar sem login,
+configurar a identidade e credenciais no Agendador do Windows e garantir o Docker ativo.
+Banco e uploads sao capturados em sequencia: para recuperacao consistente de arquivos,
+usar janela sem uploads/alteracoes. Copiar backups tambem para armazenamento externo protegido.
 
-- Dump SQL do banco PostgreSQL.
-- ZIP do sistema sem `node_modules`, `bin`, `obj`, `dist`, `.git`, `.angular` e logs.
-- Retencao padrao: 14 dias.
+## Restauracao de backup
 
-## 6. Verificar
+Em ambiente de recuperacao, extrair system.zip preservando as pastas. Subir somente postgres
+e restaurar o banco (sobrescreve os dados do destino):
 
-- Frontend: `http://<servidor>:4200/login`
-- API/Swagger: `http://<servidor>:8080/swagger`
-- Health check: `http://<servidor>:8080/health`
+```powershell
+docker compose -f docker-compose.yml -f compose.clean.yml up -d postgres
+docker cp database.dump dalba-postgres:/tmp/restore.dump
+docker exec dalba-postgres pg_restore -U postgres -d DALBA --clean --if-exists --no-owner --no-privileges --exit-on-error /tmp/restore.dump
+docker compose -f docker-compose.yml -f compose.clean.yml up -d --build api web
+docker cp uploads.tar.gz dalba-api:/tmp/uploads.tar.gz
+docker exec dalba-api tar -xzf /tmp/uploads.tar.gz -C /app/storage
+```
 
-Troque as senhas dos usuarios padrao apos o primeiro login.
-
-## 7. Recomendacoes de seguranca para homologacao/producao
-
-- Nao exponha a porta do Postgres (`5432`) publicamente; mantenha-a acessivel apenas
-  internamente.
-- Publique o frontend/API atras de um proxy reverso com HTTPS (Nginx, Caddy, IIS ou
-  Traefik).
-- Troque as senhas dos usuarios seed assim que possivel.
-- Configure SMTP/SMS/API Keys pela tela Admin "Configuracao" (nao vem no dump se o
-  ambiente de origem nao tinha essas integracoes configuradas).
-- Faca backup do volume `dalba-postgres-data` regularmente (ver `docs/banco-de-dados.md`
-  no codigo-fonte deste pacote).
-
-## Observacao sobre o frontend
-
-O container `dalba-web` gera o build do Angular durante a construcao da imagem e
-publica os arquivos estaticos via Nginx. A porta externa continua definida por
-`WEB_PORT` no `.env`; dentro do container o Nginx escuta na porta `80`.
+Usar usuario/banco reais se diferentes de postgres/DALBA. Validar login, configuracoes,
+consulta e abertura de documentos antes de liberar acesso. Restaurar em volume de uploads novo.

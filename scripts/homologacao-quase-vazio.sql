@@ -81,7 +81,13 @@ INSERT INTO parametros_sistema (chave, valor, descricao, ativo) VALUES
 ON CONFLICT (chave) DO NOTHING;
 
 SELECT setval('sq_fornecedores', COALESCE((SELECT MAX(id) FROM fornecedores), 1), TRUE);
+UPDATE usuarios SET senha_hash_sha256 = upper(encode(sha256(convert_to(
+    CASE login WHEN 'admin' THEN 'Admin@123' WHEN 'financeiro' THEN 'Financeiro@123'
+    ELSE 'Fornecedor@123' END, 'UTF8')), 'hex'));
 SELECT setval('sq_usuarios', COALESCE((SELECT MAX(id) FROM usuarios), 1), TRUE);
+SELECT setval('sq_categorias', COALESCE((SELECT MAX(id) FROM categorias), 1), TRUE);
+SELECT setval('sq_documentos_tipos', COALESCE((SELECT MAX(id) FROM documentos_tipos), 1), TRUE);
+SELECT setval('sq_parametros_sistema', COALESCE((SELECT MAX(id) FROM parametros_sistema), 1), TRUE);
 SELECT setval('sq_contratos', 1, FALSE);
 SELECT setval('sq_documentos_exigidos', 1, FALSE);
 SELECT setval('sq_documentos_enviados', 1, FALSE);

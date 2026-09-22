@@ -10,6 +10,14 @@
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
+          "configurations": {
+            "deploy": {
+              "fileReplacements": [{
+                "replace": "src/app/environments/environment.ts",
+                "with": "src/app/environments/environment.deploy.ts"
+              }]
+            }
+          },
           "options": {
             "outputPath": "dist/dalba-financeiro-web",
             "index": "src/index.html",

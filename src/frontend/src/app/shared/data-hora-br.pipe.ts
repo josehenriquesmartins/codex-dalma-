@@ -7,7 +7,11 @@ export class DataHoraBrPipe implements PipeTransform {
       return '';
     }
 
-    const parsed = value instanceof Date ? value : new Date(value);
+    // O backend grava os instantes em UTC em colunas sem fuso.
+    const normalized = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) && !/(Z|[+-]\d{2}:?\d{2})$/i.test(value)
+      ? `${value}Z`
+      : value;
+    const parsed = normalized instanceof Date ? normalized : new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
       return String(value);
     }
